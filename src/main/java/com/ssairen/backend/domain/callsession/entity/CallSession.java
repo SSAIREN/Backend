@@ -48,6 +48,11 @@ public class CallSession {
     private long accumulatedTranscriptCharacters;
 
     @Column(nullable = false)
+    private long lastAnalysisRequestedSequence;
+
+    private OffsetDateTime finalAnalysisRequestedAt;
+
+    @Column(nullable = false)
     private OffsetDateTime createdAt;
 
     @Column(nullable = false)
@@ -79,6 +84,7 @@ public class CallSession {
         this.status = CallSessionStatus.ACTIVE;
         this.nextTranscriptSequence = 1L;
         this.accumulatedTranscriptCharacters = 0L;
+        this.lastAnalysisRequestedSequence = 0L;
         this.createdAt = now;
         this.updatedAt = now;
     }
@@ -88,8 +94,20 @@ public class CallSession {
         this.accumulatedTranscriptCharacters += textLength;
         this.updatedAt = OffsetDateTime.now();
     }
-    public void startCompleting(OffsetDateTime endedAt) {
-        this.status = CallSessionStatus.COMPLETING;
+
+    public boolean queueFinalAnalysisIfNeeded(long lastTranscriptSequence) {
+        if (lastTranscriptSequence <= 0 || lastTranscriptSequence <= this.lastAnalysisRequestedSequence) {
+            return false;
+        }
+
+        this.lastAnalysisRequestedSequence = lastTranscriptSequence;
+        this.finalAnalysisRequestedAt = OffsetDateTime.now();
+        this.updatedAt = this.finalAnalysisRequestedAt;
+        return true;
+    }
+
+    public void complete(OffsetDateTime endedAt) {
+        this.status = CallSessionStatus.COMPLETED;
         this.endedAt = endedAt;
         this.updatedAt = OffsetDateTime.now();
     }
@@ -130,4 +148,3 @@ public class CallSession {
         return accumulatedTranscriptCharacters;
     }
 }
-

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssairen.backend.domain.callsession.dto.CallSessionResponse;
 import com.ssairen.backend.domain.callsession.dto.CreateCallSessionRequest;
+import com.ssairen.backend.domain.callsession.dto.SessionCompletionResult;
 import com.ssairen.backend.domain.callsession.dto.TranscriptAcceptResult;
 import com.ssairen.backend.domain.callsession.entity.CallSessionStatus;
 import com.ssairen.backend.domain.callsession.repository.CallSessionRepository;
@@ -36,7 +37,7 @@ class CallSessionServiceTest {
     }
 
     @Test
-    void ???_???_???_ID?????????????_???????????() {
+    void 같은_외부_통화_ID로_재요청하면_기존_세션을_반환한다() {
         CreateCallSessionRequest request = request("external-call-1");
 
         CallSessionResponse first = callSessionService.createSession(request);
@@ -47,14 +48,14 @@ class CallSessionServiceTest {
     }
 
     @Test
-    void STT_??????????????????????_sequence????????() {
+    void STT_청크를_순서대로_저장하고_다음_sequence를_반환한다() {
         String sessionId = createSession();
 
         TranscriptAcceptResult result = callSessionService.acceptTranscript(
                 sessionId,
                 "chunk-1",
                 1,
-                "??????????????,
+                "검찰 수사관입니다",
                 0,
                 1000,
                 true
@@ -67,15 +68,15 @@ class CallSessionServiceTest {
     }
 
     @Test
-    void ?????????????????????_???????_???_ACK_?????_???????????() {
+    void 동일한_청크를_재전송하면_중복_저장하지_않고_ACK_가능한_결과를_반환한다() {
         String sessionId = createSession();
-        callSessionService.acceptTranscript(sessionId, "chunk-1", 1, "??? ?????, 0, 1000, true);
+        callSessionService.acceptTranscript(sessionId, "chunk-1", 1, "동일 텍스트", 0, 1000, true);
 
         TranscriptAcceptResult duplicate = callSessionService.acceptTranscript(
                 sessionId,
                 "chunk-1",
                 1,
-                "??? ?????,
+                "동일 텍스트",
                 0,
                 1000,
                 true
@@ -87,14 +88,14 @@ class CallSessionServiceTest {
     }
 
     @Test
-    void ???_sequence???_?????????????() {
+    void 기대_sequence보다_큰_청크는_거부한다() {
         String sessionId = createSession();
 
         assertThatThrownBy(() -> callSessionService.acceptTranscript(
                 sessionId,
                 "chunk-2",
                 2,
-                "??????? ?????,
+                "첫 청크가 누락됨",
                 1000,
                 2000,
                 true
@@ -106,18 +107,19 @@ class CallSessionServiceTest {
     }
 
     @Test
-    void ?????sequence???_??????????????????_????????_???_???????????() {
+    void 마지막_sequence까지_수신한_후_세션을_완료하고_마지막_분석_큐잉_여부를_반환한다() {
         String sessionId = createSession();
-        callSessionService.acceptTranscript(sessionId, "chunk-1", 1, "????????", 0, 1000, true);
+        callSessionService.acceptTranscript(sessionId, "chunk-1", 1, "마지막 청크", 0, 1000, true);
 
-        CallSessionResponse completed = callSessionService.completeSession(sessionId, OffsetDateTime.now(), 1);
+        SessionCompletionResult completed = callSessionService.completeSession(sessionId, OffsetDateTime.now(), 1);
 
-        assertThat(completed.status()).isEqualTo(CallSessionStatus.COMPLETING);
+        assertThat(completed.response().status()).isEqualTo(CallSessionStatus.COMPLETED);
+        assertThat(completed.finalAnalysisQueued()).isTrue();
         assertThatThrownBy(() -> callSessionService.acceptTranscript(
                 sessionId,
                 "chunk-2",
                 2,
-                "??? ?????",
+                "종료 후 청크",
                 1000,
                 2000,
                 true
@@ -137,8 +139,7 @@ class CallSessionServiceTest {
                 "device-1",
                 OffsetDateTime.now(),
                 "01012345678",
-                new CreateCallSessionRequest.VictimRequest("??OO", 71)
+                new CreateCallSessionRequest.VictimRequest("김OO", 71)
         );
     }
 }
-

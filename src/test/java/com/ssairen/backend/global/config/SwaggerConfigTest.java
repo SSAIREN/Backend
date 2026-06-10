@@ -18,7 +18,7 @@ class SwaggerConfigTest {
     private MockMvc mockMvc;
 
     @Test
-    void Flutter_REST?_WebSocket_???_OpenAPI_???_????() throws Exception {
+    void Flutter_REST와_WebSocket_계약이_OpenAPI_문서에_포함된다() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.info.title").value("SSAIREN Flutter - Spring Boot API"))

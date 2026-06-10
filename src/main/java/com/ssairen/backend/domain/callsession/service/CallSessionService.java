@@ -2,6 +2,7 @@ package com.ssairen.backend.domain.callsession.service;
 
 import com.ssairen.backend.domain.callsession.dto.CallSessionResponse;
 import com.ssairen.backend.domain.callsession.dto.CreateCallSessionRequest;
+import com.ssairen.backend.domain.callsession.dto.SessionCompletionResult;
 import com.ssairen.backend.domain.callsession.dto.TranscriptAcceptResult;
 import com.ssairen.backend.domain.callsession.entity.CallSession;
 import com.ssairen.backend.domain.callsession.entity.TranscriptChunk;
@@ -69,7 +70,7 @@ public class CallSessionService {
         CallSession session = findSessionForUpdate(sessionId);
 
         if (!session.isAcceptingTranscript()) {
-            throw new BusinessException(ErrorCode.CALL_SESSION_COMPLETED, "??? ?????? ???????? ????????");
+            throw new BusinessException(ErrorCode.CALL_SESSION_COMPLETED, "종료 중이거나 종료된 통화 세션입니다.");
         }
 
         long expectedSequence = session.getNextTranscriptSequence();
@@ -80,10 +81,10 @@ public class CallSessionService {
             throw sequenceMismatch(expectedSequence);
         }
         if (text == null || text.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "STT ?????? ??? ??? ????????.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "STT 텍스트는 비어 있을 수 없습니다.");
         }
         if (startedAtMs < 0 || endedAtMs < startedAtMs) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "STT ??? ??????????? ??????.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "STT 시간 구간이 올바르지 않습니다.");
         }
 
         TranscriptChunk chunk = new TranscriptChunk(
@@ -108,17 +109,21 @@ public class CallSessionService {
     }
 
     @Transactional
-    public CallSessionResponse completeSession(String sessionId, OffsetDateTime endedAt, long lastTranscriptSequence) {
+    public SessionCompletionResult completeSession(String sessionId, OffsetDateTime endedAt, long lastTranscriptSequence) {
         CallSession session = findSessionForUpdate(sessionId);
 
         long lastStoredSequence = session.getNextTranscriptSequence() - 1;
         if (lastStoredSequence != lastTranscriptSequence) {
             throw sequenceMismatch(session.getNextTranscriptSequence());
         }
+
+        boolean finalAnalysisQueued = false;
         if (session.isAcceptingTranscript()) {
-            session.startCompleting(endedAt);
+            finalAnalysisQueued = session.queueFinalAnalysisIfNeeded(lastStoredSequence);
+            session.complete(endedAt);
         }
-        return CallSessionResponse.from(session);
+
+        return new SessionCompletionResult(CallSessionResponse.from(session), finalAnalysisQueued);
     }
 
     private TranscriptAcceptResult handlePossibleDuplicate(
@@ -134,7 +139,7 @@ public class CallSessionService {
         if (!storedChunk.hasSamePayload(chunkId, text)) {
             throw new BusinessException(
                     ErrorCode.DUPLICATE_TRANSCRIPT_CONFLICT,
-                    "??? ????? sequence????? ????? ?????????.",
+                    "이미 저장한 sequence에 다른 청크가 수신됐습니다.",
                     Map.of("sequence", sequence)
             );
         }
@@ -144,19 +149,18 @@ public class CallSessionService {
     private BusinessException sequenceMismatch(long expectedSequence) {
         return new BusinessException(
                 ErrorCode.TRANSCRIPT_SEQUENCE_MISMATCH,
-                "STT ??? sequence?? ?????? ??????.",
+                "STT 청크 sequence가 올바르지 않습니다.",
                 Map.of("expectedSequence", expectedSequence)
         );
     }
 
     private CallSession findSession(String sessionId) {
         return callSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "??? ???????? ????????."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "통화 세션을 찾을 수 없습니다."));
     }
 
     private CallSession findSessionForUpdate(String sessionId) {
         return callSessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "??? ???????? ????????."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "통화 세션을 찾을 수 없습니다."));
     }
 }
-

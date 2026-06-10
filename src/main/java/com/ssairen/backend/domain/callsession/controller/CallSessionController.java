@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/mobile/call-sessions")
-@Tag(name = "??? ???", description = "Flutter ???????? ??? ?????? ??? API")
+@Tag(name = "통화 세션", description = "Flutter 피해자 앱의 통화 모니터링 세션 API")
 public class CallSessionController {
 
     private final CallSessionService callSessionService;
@@ -35,20 +35,20 @@ public class CallSessionController {
 
     @PostMapping
     @Operation(
-            summary = "??? ??? ???",
-            description = "Flutter ??? ??? ?????? ??? ?????????? ??? externalCallId????????????? ?????????????"
+            summary = "통화 세션 생성",
+            description = "Flutter 앱이 통화 모니터링 시작 시 호출합니다. 같은 externalCallId를 재전송하면 기존 세션을 반환합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "??? ??? ??? ??? ??? ??? ???"),
+            @ApiResponse(responseCode = "201", description = "통화 세션 생성 또는 기존 세션 반환"),
             @ApiResponse(
                     responseCode = "400",
-                    description = "??? ?????????",
+                    description = "요청 값 검증 실패",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     public ResponseEntity<CallSessionResponse> createSession(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Flutter?? ???????? ??? ID?? ??? ??? ???",
+                    description = "Flutter가 생성한 외부 통화 ID와 통화 시작 정보",
                     required = true,
                     content = @Content(
                             schema = @Schema(implementation = CreateCallSessionRequest.class),
@@ -59,7 +59,7 @@ public class CallSessionController {
                                       "startedAt": "2026-06-10T15:20:00+09:00",
                                       "phoneNumber": "01012345678",
                                       "victim": {
-                                        "name": "??OO",
+                                        "name": "김OO",
                                         "age": 71
                                       }
                                     }
@@ -73,22 +73,21 @@ public class CallSessionController {
 
     @GetMapping("/{sessionId}")
     @Operation(
-            summary = "??? ??? ??? ???",
-            description = "Flutter ??? ????????? WebSocket???????? ?????????? sequence?? ??? ?????????????"
+            summary = "통화 세션 상태 조회",
+            description = "Flutter 앱이 재실행되거나 WebSocket을 재연결할 때 서버의 현재 sequence와 세션 상태를 복구합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "??? ??? ??? ??? ???"),
+            @ApiResponse(responseCode = "200", description = "통화 세션 상태 조회 성공"),
             @ApiResponse(
                     responseCode = "404",
-                    description = "??? ???????? ?????",
+                    description = "통화 세션을 찾을 수 없음",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     public CallSessionResponse getSession(
-            @Parameter(description = "??? ??? ID", example = "550e8400-e29b-41d4-a716-446655440000")
+            @Parameter(description = "통화 세션 ID", example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String sessionId
     ) {
         return callSessionService.getSession(sessionId);
     }
 }
-

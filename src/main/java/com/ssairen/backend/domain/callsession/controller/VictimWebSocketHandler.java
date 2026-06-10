@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssairen.backend.domain.callsession.dto.CallSessionResponse;
 import com.ssairen.backend.domain.callsession.dto.SessionCompletePayload;
+import com.ssairen.backend.domain.callsession.dto.SessionCompletionResult;
 import com.ssairen.backend.domain.callsession.dto.TranscriptAcceptResult;
 import com.ssairen.backend.domain.callsession.dto.TranscriptChunkPayload;
 import com.ssairen.backend.domain.callsession.dto.VictimClientEvent;
@@ -21,15 +22,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
-/**
- * 피해자 Flutter 앱과 Spring Boot 사이의 양방향 WebSocket 프로토콜을 처리한다.
- *
- * Flutter가 보내는 STT 청크는 서비스에서 DB 저장이 완료된 뒤에만 ACK를 반환한다.
- * 따라서 Flutter는 ACK를 받지 못한 청크를 삭제하지 않고 재연결 시 다시 보낼 수 있으며,
- * 서버는 chunkId와 sequence를 이용해 같은 청크가 중복 저장되지 않도록 처리한다.
- *
- * FastAPI 호출과 경찰 Dashboard 전송은 이 핸들러의 책임이 아니며 이번 구현 범위에도 포함하지 않는다.
- */
 public class VictimWebSocketHandler extends TextWebSocketHandler {
 
     private static final String SESSION_ID_ATTRIBUTE = "callSessionId";
@@ -42,10 +34,6 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         this.callSessionService = callSessionService;
     }
 
-    /**
-     * WebSocket 연결과 통화 세션을 1:1로 묶는다.
-     * 연결 직후 서버가 기대하는 다음 sequence를 알려 주면 Flutter가 끊긴 지점부터 안전하게 재전송할 수 있다.
-     */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String callSessionId = extractSessionId(session);
@@ -109,7 +97,6 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
                         "acceptedSequence", result.acceptedSequence(),
                         "nextTranscriptSequence", result.nextSequence(),
                         "duplicate", result.duplicate(),
-                        // FastAPI 연동은 이번 구현 범위가 아니므로 분석 준비 여부만 Flutter에 전달한다.
                         "analysisThresholdReached", result.analysisThresholdReached()
                 )
         ));
@@ -121,7 +108,7 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "통화 종료 데이터가 올바르지 않습니다.");
         }
 
-        CallSessionResponse response = callSessionService.completeSession(
+        SessionCompletionResult result = callSessionService.completeSession(
                 event.sessionId(),
                 payload.endedAt(),
                 payload.lastTranscriptSequence()
@@ -131,8 +118,8 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
                 "SESSION_COMPLETE_ACK",
                 event.sessionId(),
                 Map.of(
-                        "status", response.status(),
-                        "finalAnalysisQueued", false
+                        "status", result.response().status(),
+                        "finalAnalysisQueued", result.finalAnalysisQueued()
                 )
         ));
     }
@@ -164,10 +151,6 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * WebSocket 오류는 HTTP 상태 코드를 보낼 수 없으므로 NACK 이벤트로 변환한다.
-     * sequence 오류라면 expectedSequence를 포함해 Flutter가 재전송 시작점을 결정할 수 있게 한다.
-     */
     private void sendNack(WebSocketSession session, String callSessionId, BusinessException exception) throws IOException {
         sendEvent(session, VictimServerEvent.of(
                 "TRANSCRIPT_NACK",
@@ -200,7 +183,6 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void sendEvent(WebSocketSession session, VictimServerEvent event) throws IOException {
-        // 동일 연결로 ACK와 분석 이벤트 등이 동시에 전송될 수 있어 sendMessage 호출을 직렬화한다.
         synchronized (session) {
             if (session.isOpen()) {
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));

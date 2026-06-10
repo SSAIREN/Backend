@@ -19,7 +19,7 @@ class CallSessionControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void Flutter_???_???_????????_???_??????_?????) throws Exception {
+    void Flutter_세션_생성_요청을_본문_기반_계약으로_받는다() throws Exception {
         mockMvc.perform(post("/api/mobile/call-sessions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -29,7 +29,7 @@ class CallSessionControllerTest {
                                   "startedAt": "2026-06-10T15:20:00+09:00",
                                   "phoneNumber": "01012345678",
                                   "victim": {
-                                    "name": "??OO",
+                                    "name": "김OO",
                                     "age": 71
                                   }
                                 }
@@ -40,4 +40,3 @@ class CallSessionControllerTest {
                 .andExpect(jsonPath("$.webSocketUrl").value(org.hamcrest.Matchers.containsString("/ws/v1/victim?sessionId=")));
     }
 }
-
