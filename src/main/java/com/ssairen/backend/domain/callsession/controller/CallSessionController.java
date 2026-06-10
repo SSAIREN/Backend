@@ -24,8 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/call-sessions")
-@Tag(name = "통화 세션", description = "Flutter 피해자 앱의 통화 모니터링 세션 API")
+@RequestMapping("/api/mobile/call-sessions")
+@Tag(name = "?? ??", description = "Flutter ??? ?? ?? ???? ?? API")
 public class CallSessionController {
 
     private final CallSessionService callSessionService;
@@ -36,20 +36,20 @@ public class CallSessionController {
 
     @PostMapping
     @Operation(
-            summary = "통화 세션 생성",
-            description = "Flutter 앱이 통화 모니터링 시작 시 호출합니다. 같은 externalCallId를 재전송하면 기존 세션을 반환합니다."
+            summary = "?? ?? ??",
+            description = "Flutter ?? ?? ???? ?? ? ?????. ?? externalCallId? ????? ?? ??? ?????."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "통화 세션 생성 또는 기존 세션 반환"),
+            @ApiResponse(responseCode = "201", description = "?? ?? ?? ?? ?? ?? ??"),
             @ApiResponse(
                     responseCode = "400",
-                    description = "요청 값 검증 실패",
+                    description = "?? ? ?? ??",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     public ResponseEntity<CallSessionResponse> createSession(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Flutter가 생성한 외부 통화 ID와 통화 시작 정보",
+                    description = "Flutter? ??? ?? ?? ID? ?? ?? ??",
                     required = true,
                     content = @Content(
                             schema = @Schema(implementation = CreateCallSessionRequest.class),
@@ -63,7 +63,7 @@ public class CallSessionController {
                     )
             )
             @Valid @RequestBody CreateCallSessionRequest request,
-            @Parameter(description = "Flutter 기기 고유 식별자", example = "victim-device-001")
+            @Parameter(description = "Flutter ?? ?? ???", example = "victim-device-001")
             @RequestHeader(value = "X-Device-Id", defaultValue = "demo-device") String deviceId
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(callSessionService.createSession(request, deviceId));
@@ -71,19 +71,19 @@ public class CallSessionController {
 
     @GetMapping("/{sessionId}")
     @Operation(
-            summary = "통화 세션 상태 조회",
-            description = "Flutter 앱이 재실행되거나 WebSocket을 재연결할 때 서버의 현재 sequence와 세션 상태를 복구합니다."
+            summary = "?? ?? ?? ??",
+            description = "Flutter ?? ?????? WebSocket? ???? ? ??? ?? sequence? ?? ??? ?????."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "통화 세션 상태 조회 성공"),
+            @ApiResponse(responseCode = "200", description = "?? ?? ?? ?? ??"),
             @ApiResponse(
                     responseCode = "404",
-                    description = "통화 세션을 찾을 수 없음",
+                    description = "?? ??? ?? ? ??",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     public CallSessionResponse getSession(
-            @Parameter(description = "통화 세션 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+            @Parameter(description = "?? ?? ID", example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String sessionId
     ) {
         return callSessionService.getSession(sessionId);

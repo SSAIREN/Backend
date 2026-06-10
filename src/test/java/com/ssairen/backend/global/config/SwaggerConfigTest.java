@@ -18,12 +18,12 @@ class SwaggerConfigTest {
     private MockMvc mockMvc;
 
     @Test
-    void Flutter_REST와_WebSocket_계약이_OpenAPI_문서에_포함된다() throws Exception {
+    void Flutter_REST?_WebSocket_???_OpenAPI_???_????() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.info.title").value("SSAIREN Flutter - Spring Boot API"))
-                .andExpect(jsonPath("$.paths['/api/v1/call-sessions'].post").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/call-sessions/{sessionId}'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/mobile/call-sessions'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/mobile/call-sessions/{sessionId}'].get").exists())
                 .andExpect(jsonPath("$.paths['/ws/v1/victim'].get.responses['101']").exists());
     }
 }
