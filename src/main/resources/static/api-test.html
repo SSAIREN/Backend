@@ -231,6 +231,14 @@
               상대 전화번호
               <input id="phoneNumber" value="01012345678" />
             </label>
+            <label>
+              Victim Name
+              <input id="victimName" value="김OO" />
+            </label>
+            <label>
+              Victim Age
+              <input id="victimAge" type="number" min="1" value="71" />
+            </label>
             <label class="full">
               Session ID
               <input id="sessionId" placeholder="세션 생성 후 자동 입력됩니다." />
@@ -359,16 +367,20 @@
 
       async function createSession() {
         try {
-          const body = await request('/api/v1/call-sessions', {
+          const body = await request('/api/mobile/call-sessions', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-Device-Id': $('deviceId').value,
             },
             body: JSON.stringify({
               externalCallId: $('externalCallId').value,
+              deviceId: $('deviceId').value,
               startedAt: $('startedAt').value,
-              counterpartPhoneNumber: $('phoneNumber').value,
+              phoneNumber: $('phoneNumber').value,
+              victim: {
+                name: $('victimName').value,
+                age: Number($('victimAge').value),
+              },
             }),
           })
           $('sessionId').value = body.sessionId
@@ -382,7 +394,7 @@
       async function getSession() {
         try {
           const sessionId = requireSessionId()
-          const body = await request(`/api/v1/call-sessions/${encodeURIComponent(sessionId)}`)
+          const body = await request(`/api/mobile/call-sessions/${encodeURIComponent(sessionId)}`)
           $('sequence').value = body.nextTranscriptSequence
           $('lastSequence').value = Math.max(0, body.nextTranscriptSequence - 1)
         } catch (error) {
