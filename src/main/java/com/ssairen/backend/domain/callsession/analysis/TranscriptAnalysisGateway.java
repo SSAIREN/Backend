@@ -5,7 +5,7 @@ import com.ssairen.backend.domain.callsession.analysis.dto.TranscriptAnalysisRes
 
 public interface TranscriptAnalysisGateway {
 
-    TranscriptAnalysisResult analyze(TranscriptAnalysisCommand command);
+    TranscriptAnalysisResult analyzeRest(TranscriptAnalysisCommand command);
 
-    String providerName();
+    TranscriptAnalysisResult analyzeWebSocket(TranscriptAnalysisCommand command);
 }

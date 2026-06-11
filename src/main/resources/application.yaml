@@ -22,13 +22,11 @@ ssairen:
   websocket:
     allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:*}
   analysis:
-    provider: ${SSAIREN_ANALYSIS_PROVIDER:openai}
-    openai:
-      model: ${OPENAI_ANALYSIS_MODEL:gpt-4o}
-      prompt: ${OPENAI_ANALYSIS_PROMPT:당신은 보이스피싱 탐지 보조 AI입니다. 입력된 통화 텍스트를 분석한 뒤 JSON만 반환하세요. 필드는 riskScore(0~100 정수), phishingType(AGENCY_IMPERSONATION|ACCOUNT_TRANSFER_INDUCEMENT|KIDNAPPING_THREAT|REMOTE_APP_INSTALLATION|UNKNOWN), aiSummary(문자열), keywords(문자열 배열) 입니다.}
+    websocket-escalation-threshold: ${SSAIREN_WEBSOCKET_ESCALATION_THRESHOLD:70}
     fastapi:
       url: ${SSAIREN_FASTAPI_URL:http://localhost:8000}
-      path: ${SSAIREN_FASTAPI_ANALYSIS_PATH:/api/v1/transcript-analysis}
+      rest-path: ${SSAIREN_FASTAPI_REST_ANALYSIS_PATH:/api/v1/call-analysis/rest}
+      websocket-path: ${SSAIREN_FASTAPI_WEBSOCKET_ANALYSIS_PATH:/api/v1/call-analysis/websocket}
   transcript:
     analysis-threshold-characters: ${TRANSCRIPT_ANALYSIS_THRESHOLD_CHARACTERS:1000}
 

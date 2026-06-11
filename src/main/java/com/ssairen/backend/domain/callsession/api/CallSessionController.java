@@ -2,7 +2,10 @@ package com.ssairen.backend.domain.callsession.api;
 
 import com.ssairen.backend.domain.callsession.api.dto.CallSessionResponse;
 import com.ssairen.backend.domain.callsession.api.dto.CreateCallSessionRequest;
+import com.ssairen.backend.domain.callsession.api.dto.RestTranscriptAnalysisRequest;
+import com.ssairen.backend.domain.callsession.api.dto.RestTranscriptAnalysisResponse;
 import com.ssairen.backend.domain.callsession.application.CallSessionService;
+import com.ssairen.backend.domain.callsession.application.CallTranscriptFacadeService;
 import com.ssairen.backend.global.error.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,18 +26,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Flutter 앱이 가장 먼저 진입하는 통화 세션 REST 컨트롤러다.
- * 세션 생성/재조회만 담당하고, 실시간 transcript 수신은 WebSocket으로 분리한다.
+ * Flutter 모바일 앱이 호출하는 통화 세션 REST API 집합이다.
+ * 초기 일반 모니터링 단계에서는 5초 단위 STT를 REST로 업로드하고,
+ * 위험도가 올라가면 이후 실시간 단계는 WebSocket으로 전환하는 흐름을 전제로 한다.
  */
 @RestController
 @RequestMapping("/api/mobile/call-sessions")
-@Tag(name = "통화 세션", description = "Flutter 피해자 앱용 통화 모니터링 세션 API")
+@Tag(name = "통화 세션", description = "Flutter 피해자 앱용 통화 세션 및 초기 STT 분석 API")
 public class CallSessionController {
 
     private final CallSessionService callSessionService;
+    private final CallTranscriptFacadeService callTranscriptFacadeService;
 
-    public CallSessionController(CallSessionService callSessionService) {
+    public CallSessionController(
+            CallSessionService callSessionService,
+            CallTranscriptFacadeService callTranscriptFacadeService
+    ) {
         this.callSessionService = callSessionService;
+        this.callTranscriptFacadeService = callTranscriptFacadeService;
     }
 
     @PostMapping
@@ -93,5 +102,31 @@ public class CallSessionController {
             @PathVariable String sessionId
     ) {
         return callSessionService.getSession(sessionId);
+    }
+
+    @PostMapping("/{sessionId}/transcripts/analyze")
+    @Operation(
+            summary = "초기 5초 STT REST 분석",
+            description = "통화 시작 직후 일반 모니터링 단계에서 Flutter가 5초 단위 STT 텍스트를 REST로 업로드하면, Spring이 FastAPI의 일반 분석 endpoint로 전달하고 결과를 즉시 반환한다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "STT 저장 및 FastAPI 분석 성공"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 sequence 또는 STT payload",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "통화 세션을 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public RestTranscriptAnalysisResponse analyzeTranscript(
+            @Parameter(description = "통화 세션 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+            @PathVariable String sessionId,
+            @Valid @RequestBody RestTranscriptAnalysisRequest request
+    ) {
+        return callTranscriptFacadeService.analyzeTranscriptViaRest(sessionId, request);
     }
 }

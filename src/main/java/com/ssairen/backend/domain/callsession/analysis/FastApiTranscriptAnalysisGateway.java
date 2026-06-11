@@ -7,6 +7,7 @@ import com.ssairen.backend.domain.casefile.entity.PhishingType;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -15,22 +16,43 @@ import org.springframework.web.client.RestClient;
 @Component
 public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGateway {
 
+    /*
+     * FastAPI는 REST 초기 분석과 WebSocket 실시간 분석을 서로 다른 endpoint로 받는다.
+     * 따라서 Spring도 같은 command를 보내더라도 어느 플로우에서 왔는지에 따라
+     * 서로 다른 path로 라우팅해야 한다.
+     */
     private final RestClient restClient;
-    private final String analysisPath;
+    private final String restAnalysisPath;
+    private final String websocketAnalysisPath;
 
     public FastApiTranscriptAnalysisGateway(
             @Value("${ssairen.analysis.fastapi.url:http://localhost:8000}") String baseUrl,
-            @Value("${ssairen.analysis.fastapi.path:/api/v1/transcript-analysis}") String analysisPath
+            @Value("${ssairen.analysis.fastapi.rest-path:/api/v1/call-analysis/rest}") String restAnalysisPath,
+            @Value("${ssairen.analysis.fastapi.websocket-path:/api/v1/call-analysis/websocket}") String websocketAnalysisPath
     ) {
         this.restClient = RestClient.builder().baseUrl(baseUrl).build();
-        this.analysisPath = analysisPath;
+        this.restAnalysisPath = restAnalysisPath;
+        this.websocketAnalysisPath = websocketAnalysisPath;
     }
 
     @Override
-    public TranscriptAnalysisResult analyze(TranscriptAnalysisCommand command) {
+    public TranscriptAnalysisResult analyzeRest(TranscriptAnalysisCommand command) {
+        return requestAnalysis(command, restAnalysisPath, "rest");
+    }
+
+    @Override
+    public TranscriptAnalysisResult analyzeWebSocket(TranscriptAnalysisCommand command) {
+        return requestAnalysis(command, websocketAnalysisPath, "websocket");
+    }
+
+    private TranscriptAnalysisResult requestAnalysis(
+            TranscriptAnalysisCommand command,
+            String path,
+            String channel
+    ) {
         try {
             FastApiAnalysisResponse response = restClient.post()
-                    .uri(analysisPath)
+                    .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new FastApiAnalysisRequest(
                             command.sessionId(),
@@ -38,13 +60,14 @@ public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGatew
                             command.transcript(),
                             command.victimName(),
                             command.victimAge(),
-                            command.victimPhone()
+                            command.victimPhone(),
+                            channel
                     ))
                     .retrieve()
                     .body(FastApiAnalysisResponse.class);
 
             if (response == null) {
-                throw new IllegalStateException("빈 응답");
+                throw new IllegalStateException("FastAPI response is empty.");
             }
 
             return new TranscriptAnalysisResult(
@@ -52,20 +75,15 @@ public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGatew
                     resolveType(response.phishingType),
                     response.aiSummary,
                     response.keywords == null ? List.of() : response.keywords,
-                    providerName()
+                    "fastapi"
             );
         } catch (Exception exception) {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
                     "FastAPI 분석 요청에 실패했습니다.",
-                    java.util.Map.of("provider", providerName(), "message", exception.getMessage())
+                    Map.of("channel", channel, "message", exception.getMessage())
             );
         }
-    }
-
-    @Override
-    public String providerName() {
-        return "fastapi";
     }
 
     private PhishingType resolveType(String value) {
@@ -85,7 +103,8 @@ public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGatew
             String transcript,
             String victimName,
             Integer victimAge,
-            String victimPhone
+            String victimPhone,
+            String channel
     ) {
     }
 

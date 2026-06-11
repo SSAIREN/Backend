@@ -24,6 +24,7 @@ class SwaggerConfigTest {
                 .andExpect(jsonPath("$.info.title").value("SSAIREN Flutter - Spring Boot API"))
                 .andExpect(jsonPath("$.paths['/api/mobile/call-sessions'].post").exists())
                 .andExpect(jsonPath("$.paths['/api/mobile/call-sessions/{sessionId}'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/mobile/call-sessions/{sessionId}/transcripts/analyze'].post").exists())
                 .andExpect(jsonPath("$.paths['/ws/v1/victim'].get.responses['101']").exists());
     }
 }

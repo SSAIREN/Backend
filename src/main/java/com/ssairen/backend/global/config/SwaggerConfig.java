@@ -25,34 +25,33 @@ public class SwaggerConfig {
                 .info(new Info()
                         .title("SSAIREN Flutter - Spring Boot API")
                         .description("""
-                                Flutter 피해자 앱과 Spring Boot 사이의 통화 세션 및 STT WebSocket 계약 문서입니다.
+                                Flutter 피해자 앱과 Spring Boot 사이의 통화 모니터링 계약 문서입니다.
 
-                                - REST API: 통화 세션 생성 및 상태 복구
-                                - WebSocket: STT 청크 전송, ACK/NACK, 분석 결과, 통화 종료
-                                - FastAPI와 관리자 대시보드 연동 규격은 현재 문서 범위에 포함하지 않습니다.
+                                - REST 1단계: 통화 시작 직후 5초 단위 STT를 REST로 업로드하고 FastAPI 일반 분석 결과를 받습니다.
+                                - WebSocket 2단계: 위험도 상승 이후 실시간 STT를 WebSocket으로 올리고 FastAPI 실시간 분석 결과를 받습니다.
+                                - 관리자 대시보드 및 기타 내부 운영 API는 현재 문서 범위에 포함하지 않습니다.
                                 """)
-                        .version("v1.0.0"))
+                        .version("v1.1.0"))
                 .tags(List.of(
-                        new Tag().name("통화 세션").description("Flutter 통화 세션 생성 및 상태 조회"),
-                        new Tag().name("피해자 WebSocket").description("Flutter 피해자 앱과 백엔드 사이의 WebSocket 메시지 계약")
+                        new Tag().name("통화 세션").description("세션 생성, 상태 조회, 초기 REST 분석 API"),
+                        new Tag().name("피해자 WebSocket").description("위험도 상승 이후 실시간 STT 업로드 WebSocket 계약")
                 ))
                 .paths(webSocketPaths());
     }
 
     /**
-     * OpenAPI는 WebSocket 메시지 프로토콜을 완전하게 표현하지 못한다.
-     * 그래서 Swagger UI에서라도 Flutter 개발자가 handshake 주소와 필수 파라미터,
-     * 대표 송수신 예시를 바로 확인할 수 있도록 문서용 PathItem을 수동 등록한다.
+     * OpenAPI는 WebSocket 프로토콜을 완전하게 모델링하지 못한다.
+     * 그래서 Flutter 개발자가 handshake 주소와 대표 메시지 예시를 바로 확인할 수 있도록
+     * 문서 전용 PathItem을 수동으로 추가한다.
      */
     private Paths webSocketPaths() {
         Operation operation = new Operation()
                 .tags(List.of("피해자 WebSocket"))
-                .summary("피해자 앱용 STT 업로드 WebSocket 연결")
+                .summary("고위험 단계 STT 실시간 업로드 WebSocket 연결")
                 .description("""
                         연결 주소: `ws://{host}/ws/v1/victim?sessionId={sessionId}`
 
-                        Swagger UI의 Try it out 으로는 WebSocket 연결을 직접 실행할 수 없습니다.
-
+                        이 경로는 REST 초기 분석 단계에서 위험도가 특정 threshold 이상일 때 사용합니다.
                         연결 직후 서버는 `SESSION_READY` 이벤트로 다음 STT sequence를 내려줍니다.
                         Flutter는 `TRANSCRIPT_CHUNK`, `SESSION_COMPLETE`, `PING` 이벤트를 전송합니다.
                         서버는 `TRANSCRIPT_ACK`, `TRANSCRIPT_NACK`, `ANALYSIS_RESULT`, `ANALYSIS_ERROR`, `SESSION_COMPLETE_ACK`, `PONG` 이벤트를 반환합니다.
@@ -81,7 +80,7 @@ public class SwaggerConfig {
 
     private Example transcriptChunkExample() {
         return new Example()
-                .summary("확정된 STT 텍스트 청크 전송")
+                .summary("실시간 STT 청크 전송")
                 .value("""
                         {
                           "eventId": "event-001",
@@ -90,10 +89,10 @@ public class SwaggerConfig {
                           "occurredAt": "2026-06-10T15:20:47+09:00",
                           "data": {
                             "chunkId": "chunk-001",
-                            "sequence": 1,
-                            "text": "검찰 수사관입니다.",
-                            "startedAtMs": 0,
-                            "endedAtMs": 3000,
+                            "sequence": 8,
+                            "text": "검찰 수사관입니다. 지금 앱을 설치하세요.",
+                            "startedAtMs": 35000,
+                            "endedAtMs": 40000,
                             "isFinal": true
                           }
                         }
@@ -102,7 +101,7 @@ public class SwaggerConfig {
 
     private Example transcriptAckExample() {
         return new Example()
-                .summary("STT 청크 저장 완료 ACK")
+                .summary("실시간 STT 저장 ACK")
                 .value("""
                         {
                           "eventId": "server-event-001",
@@ -111,10 +110,10 @@ public class SwaggerConfig {
                           "occurredAt": "2026-06-10T15:20:47+09:00",
                           "data": {
                             "chunkId": "chunk-001",
-                            "acceptedSequence": 1,
-                            "nextTranscriptSequence": 2,
+                            "acceptedSequence": 8,
+                            "nextTranscriptSequence": 9,
                             "duplicate": false,
-                            "analysisThresholdReached": false
+                            "analysisThresholdReached": true
                           }
                         }
                         """);
@@ -122,7 +121,7 @@ public class SwaggerConfig {
 
     private Example sessionCompleteExample() {
         return new Example()
-                .summary("마지막 청크 ACK 확인 후 통화 종료 요청")
+                .summary("마지막 실시간 청크 이후 통화 종료 요청")
                 .value("""
                         {
                           "eventId": "event-002",

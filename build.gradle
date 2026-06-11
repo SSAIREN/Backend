@@ -19,9 +19,6 @@ repositories {
 }
 
 dependencies {
-    implementation('com.openai:openai-java:4.39.1') {
-        exclude group: 'io.swagger.core.v3', module: 'swagger-annotations'
-    }
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'

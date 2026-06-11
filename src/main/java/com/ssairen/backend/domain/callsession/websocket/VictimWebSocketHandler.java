@@ -117,13 +117,12 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         ));
 
         /*
-         * Flutter는 약 5초 단위로 텍스트 청크를 계속 보낸다.
-         * 따라서 청크가 정상 저장될 때마다 곧바로 분석을 시도하고,
-         * 분석 결과도 별도 이벤트로 다시 돌려줘야 UI가 지연 없이 반응할 수 있다.
-         * 현재 라우터 기본값은 openai이며, 설정 한 줄만 바꾸면 fastapi로 전환 가능하다.
+         * 위험도 상승 이후 단계에서는 Flutter가 WebSocket으로 STT를 계속 보낸다.
+         * 이때는 FastAPI의 "실시간 WebSocket 분석용 endpoint"를 호출해
+         * 일반 REST 분석 단계보다 더 많은 메타데이터를 받는 구조를 전제로 한다.
          */
         try {
-            TranscriptAnalysisResult analysisResult = transcriptAnalysisService.analyzeChunk(
+            TranscriptAnalysisResult analysisResult = transcriptAnalysisService.analyzeWebSocketChunk(
                     event.sessionId(),
                     payload.sequence(),
                     payload.text()
