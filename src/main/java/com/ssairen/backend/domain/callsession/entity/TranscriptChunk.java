@@ -13,12 +13,6 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
 
 @Entity
-/**
- * Flutter STT 엔진이 확정한 텍스트 한 조각을 저장한다.
- *
- * chunkId는 네트워크 재전송 시 동일 메시지임을 식별하고,
- * call_session_id + sequence_number 조합은 통화 안에서 텍스트 순서를 보장한다.
- */
 @Table(
         name = "transcript_chunks",
         uniqueConstraints = {
@@ -30,6 +24,7 @@ public class TranscriptChunk {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "transcript_chunk_id")
     private Long id;
 
     @Column(name = "chunk_id", nullable = false, length = 100)
@@ -42,19 +37,19 @@ public class TranscriptChunk {
     @Column(name = "sequence_number", nullable = false)
     private long sequence;
 
-    @Column(nullable = false, columnDefinition = "text")
+    @Column(name = "text", nullable = false, columnDefinition = "text")
     private String text;
 
-    @Column(nullable = false)
+    @Column(name = "started_at_ms", nullable = false)
     private long startedAtMs;
 
-    @Column(nullable = false)
+    @Column(name = "ended_at_ms", nullable = false)
     private long endedAtMs;
 
-    @Column(nullable = false)
+    @Column(name = "final_chunk", nullable = false)
     private boolean finalChunk;
 
-    @Column(nullable = false)
+    @Column(name = "received_at", nullable = false)
     private OffsetDateTime receivedAt;
 
     protected TranscriptChunk() {

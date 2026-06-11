@@ -15,24 +15,26 @@ import java.time.OffsetDateTime;
 public class User {
 
     /*
-     * users는 피해자와 보호자를 함께 담는 공용 테이블이다.
-     * 실제 역할 차이는 role enum과 pairings 같은 연결 테이블에서 구분한다.
+     * users 는 피해자/보호자를 함께 담는 공용 테이블이다.
+     * 운영 DB에서 암묵적 네이밍 전략 차이로 column mismatch가 나지 않도록
+     * 실제 컬럼명을 명시적으로 모두 고정한다.
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Long id;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "name", nullable = false, length = 50)
     private String name;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "role", nullable = false, length = 20)
     private UserRole role;
 
+    @Column(name = "age")
     private Integer age;
 
-    @Column(length = 20)
+    @Column(name = "phone", length = 20)
     private String phone;
 
     @Column(name = "fcm_token", length = 255)
@@ -45,7 +47,6 @@ public class User {
     }
 
     public User(String name, UserRole role, Integer age, String phone) {
-        // 생성 시점에는 이름/역할/기본 프로필만 있어도 row를 만들 수 있게 둔다.
         this.name = name;
         this.role = role;
         this.age = age;
@@ -54,7 +55,6 @@ public class User {
     }
 
     public void updateVictimProfile(Integer age, String phone) {
-        // 같은 피해자가 다시 들어오면 최신 프로필 정보로 보정한다.
         this.age = age;
         this.phone = phone;
     }

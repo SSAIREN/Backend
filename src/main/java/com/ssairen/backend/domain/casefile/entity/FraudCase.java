@@ -22,8 +22,9 @@ import java.util.List;
 public class FraudCase {
 
     /*
-     * ERD 기준의 핵심 비즈니스 엔티티.
-     * 실제 탐지 결과, 대응 상태, 위치/요약 정보는 최종적으로 이 테이블에 쌓인다.
+     * cases 는 ERD 기준 핵심 사건 엔티티다.
+     * 최근 transcript 분석 결과가 누적 반영되며,
+     * 운영 DB 컬럼명과 정확히 맞도록 전부 명시적으로 고정한다.
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,22 +43,22 @@ public class FraudCase {
     private PhishingType phishingType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20)
     private CaseStatus status;
 
     @Column(name = "ai_summary", columnDefinition = "text")
     private String aiSummary;
 
-    @Column(length = 255)
+    @Column(name = "keywords", length = 255)
     private String keywords;
 
-    @Column(length = 50)
+    @Column(name = "region", length = 50)
     private String region;
 
-    @Column(precision = 10, scale = 7)
+    @Column(name = "latitude", precision = 10, scale = 7)
     private BigDecimal latitude;
 
-    @Column(precision = 10, scale = 7)
+    @Column(name = "longitude", precision = 10, scale = 7)
     private BigDecimal longitude;
 
     @Column(name = "call_duration_sec")
@@ -73,10 +74,6 @@ public class FraudCase {
     }
 
     public FraudCase(User victim, OffsetDateTime detectedAt) {
-        /*
-         * 세션 생성 직후에는 아직 분석 결과가 없기 때문에
-         * case는 "탐지 시작됨 / 진행 중" 정도의 기본 상태만 가진다.
-         */
         this.victim = victim;
         this.riskScore = 0;
         this.status = CaseStatus.IN_PROGRESS;
@@ -84,10 +81,6 @@ public class FraudCase {
     }
 
     public void updateTranscriptProgress(long endedAtMs) {
-        /*
-         * STT 청크가 끝난 시점을 기준으로
-         * 현재까지의 통화 진행 시간을 초 단위로 추정한다.
-         */
         int progressedSeconds = (int) Math.ceil(endedAtMs / 1000.0d);
         if (this.callDurationSec == null || progressedSeconds > this.callDurationSec) {
             this.callDurationSec = progressedSeconds;
@@ -100,10 +93,6 @@ public class FraudCase {
             String aiSummary,
             List<String> keywords
     ) {
-        /*
-         * 분석기는 매 청크마다 최신 판단을 돌려주므로
-         * case에는 가장 최근 분석 결과를 덮어쓰는 방식으로 유지한다.
-         */
         if (riskScore != null) {
             this.riskScore = Math.max(0, Math.min(100, riskScore));
         }
@@ -113,14 +102,9 @@ public class FraudCase {
     }
 
     public void complete(OffsetDateTime startedAt, OffsetDateTime endedAt) {
-        /*
-         * ERD의 responded_at은 현재 구현에서
-         * "이 case가 종료 처리된 시각"으로 사용한다.
-         */
         this.status = CaseStatus.COMPLETED;
         this.respondedAt = endedAt;
 
-        // 실제 종료 시각 기준의 통화 길이가 더 크면 최종 duration으로 덮어쓴다.
         long durationSeconds = Math.max(0L, Duration.between(startedAt, endedAt).getSeconds());
         int completedDuration = Math.toIntExact(durationSeconds);
         if (this.callDurationSec == null || completedDuration > this.callDurationSec) {
