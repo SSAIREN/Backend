@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSAIREN Flutter API Tester</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1220;
+        --panel: #111b2e;
+        --panel-2: #17233a;
+        --line: #2a3a55;
+        --text: #e5edf8;
+        --muted: #9babc2;
+        --blue: #3b82f6;
+        --green: #22c55e;
+        --red: #ef4444;
+        --yellow: #f59e0b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, sans-serif;
+      }
+
+      header {
+        padding: 22px 28px;
+        border-bottom: 1px solid var(--line);
+        background: #0e1728;
+      }
+
+      header h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(460px, 1fr) minmax(380px, 0.8fr);
+        gap: 18px;
+        padding: 20px;
+      }
+
+      .column {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      section {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 12px;
+        padding: 18px;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .full {
+        grid-column: 1 / -1;
+      }
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+        border-radius: 7px;
+        padding: 9px 10px;
+        font: inherit;
+      }
+
+      textarea {
+        min-height: 76px;
+        resize: vertical;
+      }
+
+      button,
+      a.button {
+        border: 0;
+        border-radius: 7px;
+        background: var(--blue);
+        color: white;
+        cursor: pointer;
+        padding: 9px 13px;
+        font-weight: 600;
+        text-decoration: none;
+        font-size: 13px;
+      }
+
+      button.secondary,
+      a.secondary {
+        background: #334155;
+      }
+
+      button.danger {
+        background: #b91c1c;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--red);
+      }
+
+      .dot.connected {
+        background: var(--green);
+      }
+
+      .hint {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      #log {
+        min-height: 640px;
+        max-height: calc(100vh - 150px);
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #070d18;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        font: 12px/1.55 monospace;
+      }
+
+      .log-in {
+        color: #86efac;
+      }
+
+      .log-out {
+        color: #93c5fd;
+      }
+
+      .log-error {
+        color: #fca5a5;
+      }
+
+      @media (max-width: 980px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+
+        #log {
+          min-height: 300px;
+          max-height: 500px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>SSAIREN Flutter ↔ Spring Boot API Tester</h1>
+      <p>통화 세션 REST API와 피해자 STT WebSocket만 테스트합니다. Dashboard/FastAPI 기능은 포함하지 않습니다.</p>
+    </header>
+
+    <main>
+      <div class="column">
+        <section>
+          <h2>1. 통화 세션 REST API</h2>
+          <div class="grid">
+            <label>
+              Device ID
+              <input id="deviceId" value="api-test-device" />
+            </label>
+            <label>
+              External Call ID
+              <input id="externalCallId" />
+            </label>
+            <label>
+              통화 시작 시각
+              <input id="startedAt" />
+            </label>
+            <label>
+              상대 전화번호
+              <input id="phoneNumber" value="01012345678" />
+            </label>
+            <label>
+              Victim Name
+              <input id="victimName" value="김OO" />
+            </label>
+            <label>
+              Victim Age
+              <input id="victimAge" type="number" min="1" value="71" />
+            </label>
+            <label class="full">
+              Session ID
+              <input id="sessionId" placeholder="세션 생성 후 자동 입력됩니다." />
+            </label>
+          </div>
+          <div class="actions">
+            <button id="createSession">세션 생성</button>
+            <button id="getSession" class="secondary">세션 조회</button>
+            <a class="button secondary" href="/swagger-ui.html" target="_blank">Swagger 열기</a>
+          </div>
+        </section>
+
+        <section>
+          <h2>2. 피해자 WebSocket</h2>
+          <div class="status">
+            <span id="socketDot" class="dot"></span>
+            <span id="socketStatus">연결 안 됨</span>
+          </div>
+          <div class="actions">
+            <button id="connectSocket">WebSocket 연결</button>
+            <button id="disconnectSocket" class="danger" disabled>연결 종료</button>
+            <button id="sendPing" class="secondary" disabled>PING 전송</button>
+          </div>
+          <p class="hint">
+            연결 주소: <code>/ws/v1/victim?sessionId={sessionId}</code><br />
+            연결 직후 서버가 보낸 <code>SESSION_READY.nextTranscriptSequence</code>를 STT sequence에 자동 반영합니다.
+          </p>
+        </section>
+
+        <section>
+          <h2>3. STT 청크 전송</h2>
+          <div class="grid">
+            <label>
+              Sequence
+              <input id="sequence" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Chunk ID
+              <input id="chunkId" />
+            </label>
+            <label>
+              시작 ms
+              <input id="startedAtMs" type="number" min="0" value="0" />
+            </label>
+            <label>
+              종료 ms
+              <input id="endedAtMs" type="number" min="0" value="3000" />
+            </label>
+            <label class="full">
+              STT 확정 텍스트
+              <textarea id="transcriptText">검찰 수사관입니다. 지금 안전계좌로 이체하세요.</textarea>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="sendTranscript" disabled>TRANSCRIPT_CHUNK 전송</button>
+            <button id="resendTranscript" class="secondary" disabled>동일 청크 재전송</button>
+          </div>
+          <p class="hint">ACK를 받으면 sequence와 chunk ID가 다음 값으로 자동 증가합니다.</p>
+        </section>
+
+        <section>
+          <h2>4. 통화 종료</h2>
+          <label>
+            마지막 전송 Sequence
+            <input id="lastSequence" type="number" min="0" value="0" />
+          </label>
+          <div class="actions">
+            <button id="completeSession" class="danger" disabled>SESSION_COMPLETE 전송</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="column">
+        <section>
+          <h2>요청·응답 로그</h2>
+          <div class="actions">
+            <button id="clearLog" class="secondary">로그 지우기</button>
+          </div>
+          <div id="log"></div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id)
+      let socket = null
+      let lastTranscriptEvent = null
+
+      function nowIso() {
+        return new Date().toISOString()
+      }
+
+      function randomId(prefix) {
+        return `${prefix}-${crypto.randomUUID()}`
+      }
+
+      function initializeValues() {
+        $('externalCallId').value = randomId('browser-call')
+        $('startedAt').value = nowIso()
+        $('chunkId').value = randomId('chunk')
+      }
+
+      function appendLog(direction, title, payload, className = '') {
+        const line = document.createElement('div')
+        line.className = className
+        const body = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2)
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${direction} ${title}\n${body}\n\n`
+        $('log').appendChild(line)
+        $('log').scrollTop = $('log').scrollHeight
+      }
+
+      async function request(path, options = {}) {
+        appendLog('→', `${options.method || 'GET'} ${path}`, options.body || '(body 없음)', 'log-out')
+        const response = await fetch(path, options)
+        const text = await response.text()
+        let body = text
+        try {
+          body = text ? JSON.parse(text) : null
+        } catch {
+          // JSON이 아닌 응답도 로그에서 그대로 확인할 수 있게 둔다.
+        }
+        appendLog('←', `${response.status} ${response.statusText}`, body, response.ok ? 'log-in' : 'log-error')
+        if (!response.ok) throw new Error(body?.message || `HTTP ${response.status}`)
+        return body
+      }
+
+      async function createSession() {
+        try {
+          const body = await request('/api/mobile/call-sessions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              externalCallId: $('externalCallId').value,
+              deviceId: $('deviceId').value,
+              startedAt: $('startedAt').value,
+              phoneNumber: $('phoneNumber').value,
+              victim: {
+                name: $('victimName').value,
+                age: Number($('victimAge').value),
+              },
+            }),
+          })
+          $('sessionId').value = body.sessionId
+          $('sequence').value = body.nextTranscriptSequence
+          $('lastSequence').value = Math.max(0, body.nextTranscriptSequence - 1)
+        } catch (error) {
+          appendLog('!', '세션 생성 실패', error.message, 'log-error')
+        }
+      }
+
+      async function getSession() {
+        try {
+          const sessionId = requireSessionId()
+          const body = await request(`/api/mobile/call-sessions/${encodeURIComponent(sessionId)}`)
+          $('sequence').value = body.nextTranscriptSequence
+          $('lastSequence').value = Math.max(0, body.nextTranscriptSequence - 1)
+        } catch (error) {
+          appendLog('!', '세션 조회 실패', error.message, 'log-error')
+        }
+      }
+
+      function requireSessionId() {
+        const sessionId = $('sessionId').value.trim()
+        if (!sessionId) throw new Error('먼저 통화 세션을 생성하거나 Session ID를 입력하세요.')
+        return sessionId
+      }
+
+      function connectSocket() {
+        try {
+          const sessionId = requireSessionId()
+          if (socket && socket.readyState === WebSocket.OPEN) return
+
+          const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+          const url = `${protocol}//${location.host}/ws/v1/victim?sessionId=${encodeURIComponent(sessionId)}`
+          appendLog('→', 'WebSocket 연결', url, 'log-out')
+          socket = new WebSocket(url)
+
+          socket.onopen = () => setSocketConnected(true, '연결됨')
+          socket.onmessage = (event) => {
+            const message = JSON.parse(event.data)
+            appendLog('←', `WebSocket ${message.eventType}`, message, 'log-in')
+            applyServerEvent(message)
+          }
+          socket.onerror = () => appendLog('!', 'WebSocket 오류', '브라우저 콘솔과 서버 로그를 확인하세요.', 'log-error')
+          socket.onclose = (event) => {
+            setSocketConnected(false, `연결 종료 (${event.code})`)
+            appendLog('←', 'WebSocket 연결 종료', { code: event.code, reason: event.reason }, 'log-error')
+          }
+        } catch (error) {
+          appendLog('!', 'WebSocket 연결 실패', error.message, 'log-error')
+        }
+      }
+
+      function setSocketConnected(connected, message) {
+        $('socketDot').classList.toggle('connected', connected)
+        $('socketStatus').textContent = message
+        $('connectSocket').disabled = connected
+        $('disconnectSocket').disabled = !connected
+        $('sendPing').disabled = !connected
+        $('sendTranscript').disabled = !connected
+        $('resendTranscript').disabled = !connected
+        $('completeSession').disabled = !connected
+      }
+
+      function sendEvent(eventType, data) {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          throw new Error('WebSocket이 연결되어 있지 않습니다.')
+        }
+        const event = {
+          eventId: randomId('browser-event'),
+          eventType,
+          sessionId: requireSessionId(),
+          occurredAt: nowIso(),
+          data,
+        }
+        appendLog('→', `WebSocket ${eventType}`, event, 'log-out')
+        socket.send(JSON.stringify(event))
+        return event
+      }
+
+      function sendTranscript() {
+        try {
+          const sequence = Number($('sequence').value)
+          const event = sendEvent('TRANSCRIPT_CHUNK', {
+            chunkId: $('chunkId').value,
+            sequence,
+            text: $('transcriptText').value,
+            startedAtMs: Number($('startedAtMs').value),
+            endedAtMs: Number($('endedAtMs').value),
+            isFinal: true,
+          })
+          lastTranscriptEvent = event
+        } catch (error) {
+          appendLog('!', 'STT 전송 실패', error.message, 'log-error')
+        }
+      }
+
+      function resendTranscript() {
+        try {
+          if (!lastTranscriptEvent) throw new Error('재전송할 이전 STT 청크가 없습니다.')
+          appendLog('→', 'WebSocket 동일 STT 재전송', lastTranscriptEvent, 'log-out')
+          socket.send(JSON.stringify(lastTranscriptEvent))
+        } catch (error) {
+          appendLog('!', 'STT 재전송 실패', error.message, 'log-error')
+        }
+      }
+
+      function applyServerEvent(message) {
+        if (message.eventType === 'SESSION_READY') {
+          $('sequence').value = message.data.nextTranscriptSequence
+          $('lastSequence').value = Math.max(0, message.data.nextTranscriptSequence - 1)
+        }
+        if (message.eventType === 'TRANSCRIPT_ACK') {
+          $('lastSequence').value = message.data.acceptedSequence
+          if (!message.data.duplicate) {
+            $('sequence').value = message.data.nextTranscriptSequence
+            $('chunkId').value = randomId('chunk')
+            $('startedAtMs').value = $('endedAtMs').value
+            $('endedAtMs').value = Number($('endedAtMs').value) + 3000
+          }
+        }
+      }
+
+      $('createSession').addEventListener('click', createSession)
+      $('getSession').addEventListener('click', getSession)
+      $('connectSocket').addEventListener('click', connectSocket)
+      $('disconnectSocket').addEventListener('click', () => socket?.close(1000, '사용자 요청'))
+      $('sendPing').addEventListener('click', () => sendEvent('PING', {}))
+      $('sendTranscript').addEventListener('click', sendTranscript)
+      $('resendTranscript').addEventListener('click', resendTranscript)
+      $('completeSession').addEventListener('click', () => {
+        try {
+          sendEvent('SESSION_COMPLETE', {
+            endedAt: nowIso(),
+            lastTranscriptSequence: Number($('lastSequence').value),
+          })
+        } catch (error) {
+          appendLog('!', '통화 종료 실패', error.message, 'log-error')
+        }
+      })
+      $('clearLog').addEventListener('click', () => ($('log').textContent = ''))
+
+      initializeValues()
+    </script>
+  </body>
+</html>
