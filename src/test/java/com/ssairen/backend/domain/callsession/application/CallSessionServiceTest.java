@@ -11,6 +11,7 @@ import com.ssairen.backend.domain.callsession.repository.CallSessionRepository;
 import com.ssairen.backend.domain.callsession.repository.TranscriptChunkRepository;
 import com.ssairen.backend.domain.callsession.websocket.dto.TranscriptAcceptResult;
 import com.ssairen.backend.domain.casefile.repository.FraudCaseRepository;
+import com.ssairen.backend.domain.pairing.repository.PairingRepository;
 import com.ssairen.backend.domain.user.repository.UserRepository;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
@@ -36,6 +37,9 @@ class CallSessionServiceTest {
     private FraudCaseRepository fraudCaseRepository;
 
     @Autowired
+    private PairingRepository pairingRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @BeforeEach
@@ -43,7 +47,7 @@ class CallSessionServiceTest {
         transcriptChunkRepository.deleteAll();
         callSessionRepository.deleteAll();
         fraudCaseRepository.deleteAll();
-        userRepository.deleteAll();
+        pairingRepository.deleteAll();
     }
 
     @Test
@@ -58,14 +62,14 @@ class CallSessionServiceTest {
     }
 
     @Test
-    void STT_청크를_순서대로_저장하고_다음_sequence를_반환한다() {
+    void STT_청크를_순서대로_받고_다음_sequence를_반환한다() {
         String sessionId = createSession();
 
         TranscriptAcceptResult result = callSessionService.acceptTranscript(
                 sessionId,
                 "chunk-1",
                 1,
-                "검찰 수사관입니다",
+                "검찰 수사관입니다.",
                 0,
                 1000,
                 true
@@ -78,7 +82,7 @@ class CallSessionServiceTest {
     }
 
     @Test
-    void 동일한_청크를_재전송하면_중복_저장하지_않고_ACK_가능한_결과를_반환한다() {
+    void 동일한_청크를_재전송하면_중복으로_처리하지_않고_ACK_가능한_결과를_반환한다() {
         String sessionId = createSession();
         callSessionService.acceptTranscript(sessionId, "chunk-1", 1, "동일 텍스트", 0, 1000, true);
 
@@ -98,14 +102,14 @@ class CallSessionServiceTest {
     }
 
     @Test
-    void 기대_sequence보다_큰_청크는_거부한다() {
+    void 기대_sequence보다_큰_청크는_거절된다() {
         String sessionId = createSession();
 
         assertThatThrownBy(() -> callSessionService.acceptTranscript(
                 sessionId,
                 "chunk-2",
                 2,
-                "첫 청크가 누락됨",
+                "첫 청크가 유실됨",
                 1000,
                 2000,
                 true
@@ -117,7 +121,7 @@ class CallSessionServiceTest {
     }
 
     @Test
-    void 마지막_sequence까지_수신한_후_세션을_완료하고_마지막_분석_큐잉_여부를_반환한다() {
+    void 마지막_sequence까지_수신하면_세션을_완료하고_마지막_분석_예약_여부를_반환한다() {
         String sessionId = createSession();
         callSessionService.acceptTranscript(sessionId, "chunk-1", 1, "마지막 청크", 0, 1000, true);
 
@@ -144,12 +148,14 @@ class CallSessionServiceTest {
     }
 
     private CreateCallSessionRequest request(String externalCallId) {
+        Long victimUserId = userRepository.findById(1001L).orElseThrow().getId();
         return new CreateCallSessionRequest(
+                victimUserId,
                 externalCallId,
                 "device-1",
                 OffsetDateTime.now(),
                 "01012345678",
-                new CreateCallSessionRequest.VictimRequest("김OO", 71)
+                new CreateCallSessionRequest.VictimRequest("김영희", 71)
         );
     }
 }

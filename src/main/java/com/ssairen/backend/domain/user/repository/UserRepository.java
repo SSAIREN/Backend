@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findFirstByNameAndRoleAndPhone(String name, UserRole role, String phone);
+
+    Optional<User> findByIdAndRole(Long id, UserRole role);
 }

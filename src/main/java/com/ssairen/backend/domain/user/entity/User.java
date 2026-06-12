@@ -4,8 +4,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
@@ -15,12 +13,10 @@ import java.time.OffsetDateTime;
 public class User {
 
     /*
-     * users 는 피해자/보호자를 함께 담는 공용 테이블이다.
-     * 운영 DB에서 암묵적 네이밍 전략 차이로 column mismatch가 나지 않도록
-     * 실제 컬럼명을 명시적으로 모두 고정한다.
+     * MVP 단계에서는 Flutter가 하드코딩된 userId를 보낼 수 있도록
+     * user_id 를 서버 더미 데이터 기준으로 고정 주입 가능하게 설계한다.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Long id;
 
@@ -47,11 +43,37 @@ public class User {
     }
 
     public User(String name, UserRole role, Integer age, String phone) {
+        this(null, name, role, age, phone, null, OffsetDateTime.now());
+    }
+
+    private User(
+            Long id,
+            String name,
+            UserRole role,
+            Integer age,
+            String phone,
+            String fcmToken,
+            OffsetDateTime createdAt
+    ) {
+        this.id = id;
         this.name = name;
         this.role = role;
         this.age = age;
         this.phone = phone;
-        this.createdAt = OffsetDateTime.now();
+        this.fcmToken = fcmToken;
+        this.createdAt = createdAt;
+    }
+
+    public static User mvpPreset(
+            Long userId,
+            String name,
+            UserRole role,
+            Integer age,
+            String phone,
+            String fcmToken,
+            OffsetDateTime createdAt
+    ) {
+        return new User(userId, name, role, age, phone, fcmToken, createdAt);
     }
 
     public void updateVictimProfile(Integer age, String phone) {
@@ -77,5 +99,9 @@ public class User {
 
     public String getPhone() {
         return phone;
+    }
+
+    public String getFcmToken() {
+        return fcmToken;
     }
 }

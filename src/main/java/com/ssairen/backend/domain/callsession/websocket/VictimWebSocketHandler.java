@@ -16,6 +16,7 @@ import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
 import java.io.IOException;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -24,12 +25,12 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
+@Slf4j
 public class VictimWebSocketHandler extends TextWebSocketHandler {
 
     /*
-     * WebSocket 연결 객체는 메모리 안에서만 유지되므로
-     * handshake 직후 session attribute에 callSessionId를 묶어 둔다.
-     * 이후 들어오는 모든 메시지는 이 값과 대조해 다른 세션 오염을 막는다.
+     * 연결된 WebSocket과 통화 세션을 바인딩하기 위해
+     * handshake 직후 session attribute에 callSessionId를 저장한다.
      */
     private static final String SESSION_ID_ATTRIBUTE = "callSessionId";
 
@@ -53,7 +54,18 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         CallSessionResponse callSession = callSessionService.getSession(callSessionId);
         session.getAttributes().put(SESSION_ID_ATTRIBUTE, callSessionId);
 
-        // Flutter는 이 값을 기준으로 다음 transcript sequence를 이어서 보내면 된다.
+        log.debug(
+                "Flutter WebSocket connected. sessionId={}, socketId={}, remoteAddress={}",
+                callSessionId,
+                session.getId(),
+                session.getRemoteAddress()
+        );
+
+        /*
+         * 프론트는 이 응답을 기준으로 다음에 보내야 할 sequence를 맞춰야 한다.
+         * 재연결 상황에서도 서버가 기대하는 sequence를 다시 전달하기 위해
+         * 연결 직후 SESSION_READY를 항상 내려준다.
+         */
         sendEvent(session, VictimServerEvent.of(
                 "SESSION_READY",
                 callSessionId,
@@ -66,6 +78,13 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         String callSessionId = getBoundSessionId(session);
 
         try {
+            log.debug(
+                    "Received Flutter WebSocket message. sessionId={}, socketId={}, payload={}",
+                    callSessionId,
+                    session.getId(),
+                    message.getPayload()
+            );
+
             VictimClientEvent event = objectMapper.readValue(message.getPayload(), VictimClientEvent.class);
             validateEnvelope(event, callSessionId);
 
@@ -93,7 +112,10 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         TranscriptChunkPayload payload = objectMapper.treeToValue(event.data(), TranscriptChunkPayload.class);
         validateTranscriptPayload(payload);
 
-        // transcript 저장과 sequence 증가는 서비스 계층에서 트랜잭션으로 묶어 처리한다.
+        /*
+         * transcript 저장과 sequence 검증은 세션 서비스에서 수행한다.
+         * 성공하면 먼저 ACK를 반환하고, 그 다음 FastAPI 분석 결과를 내려준다.
+         */
         TranscriptAcceptResult result = callSessionService.acceptTranscript(
                 event.sessionId(),
                 payload.chunkId(),
@@ -116,11 +138,6 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
                 )
         ));
 
-        /*
-         * 위험도 상승 이후 단계에서는 Flutter가 WebSocket으로 STT를 계속 보낸다.
-         * 이때는 FastAPI의 "실시간 WebSocket 분석용 endpoint"를 호출해
-         * 일반 REST 분석 단계보다 더 많은 메타데이터를 받는 구조를 전제로 한다.
-         */
         try {
             TranscriptAnalysisResult analysisResult = transcriptAnalysisService.analyzeWebSocketChunk(
                     event.sessionId(),
@@ -162,10 +179,6 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "통화 종료 데이터가 올바르지 않습니다.");
         }
 
-        /*
-         * 종료 ACK에는 최종 상태와 마지막 분석 필요 여부를 함께 담는다.
-         * Flutter는 이 응답만으로도 종료 성공 여부와 후처리 대기 상태를 구분할 수 있다.
-         */
         SessionCompletionResult result = callSessionService.completeSession(
                 event.sessionId(),
                 payload.endedAt(),
@@ -241,18 +254,44 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void sendEvent(WebSocketSession session, VictimServerEvent event) throws IOException {
-        // 동일 연결에서 여러 서버 이벤트가 연속 전송될 수 있어 세션 단위 직렬화를 적용한다.
         synchronized (session) {
             if (session.isOpen()) {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
+                String payload = objectMapper.writeValueAsString(event);
+                log.debug(
+                        "Sending WebSocket message to Flutter. sessionId={}, socketId={}, eventType={}, payload={}",
+                        event.sessionId(),
+                        session.getId(),
+                        event.eventType(),
+                        payload
+                );
+                session.sendMessage(new TextMessage(payload));
             }
         }
     }
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        log.debug(
+                "Flutter WebSocket transport error. sessionId={}, socketId={}, message={}",
+                session.getAttributes().get(SESSION_ID_ATTRIBUTE),
+                session.getId(),
+                exception.getMessage(),
+                exception
+        );
         if (session.isOpen()) {
             session.close(CloseStatus.SERVER_ERROR);
         }
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        log.debug(
+                "Flutter WebSocket closed. sessionId={}, socketId={}, closeCode={}, reason={}",
+                session.getAttributes().get(SESSION_ID_ATTRIBUTE),
+                session.getId(),
+                status.getCode(),
+                status.getReason()
+        );
+        super.afterConnectionClosed(session, status);
     }
 }

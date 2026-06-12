@@ -376,6 +376,10 @@
           <h2>1. 세션 입력</h2>
           <div class="grid">
             <label>
+              MVP User ID
+              <input id="userId" type="number" min="1" value="1001" />
+            </label>
+            <label>
               Device ID
               <input id="deviceId" value="api-test-device" />
             </label>
@@ -576,6 +580,7 @@
       }
 
       function initializeValues() {
+        $('userId').value = '1001'
         $('externalCallId').value = randomId('browser-call')
         $('startedAt').value = nowIso()
         $('chunkId').value = randomId('chunk')
@@ -680,6 +685,7 @@
           $('transcriptText').value = '오늘은 일정 확인 전화였습니다. 오후에 다시 연락드리겠습니다.'
           $('victimName').value = '김OO'
           $('victimAge').value = '71'
+          $('userId').value = '1001'
           $('phoneNumber').value = '01012345678'
           queueItems = []
           enqueueSample('rest', '안녕하세요. 오늘 예약 일정만 다시 확인드릴게요.')
@@ -688,6 +694,7 @@
           $('transcriptText').value = '검찰입니다. 안전계좌로 즉시 이체하세요.'
           $('victimName').value = '박OO'
           $('victimAge').value = '68'
+          $('userId').value = '1001'
           $('phoneNumber').value = '01099998888'
           queueItems = []
           enqueueSample('rest', '검찰입니다. 본인 명의 계좌가 범죄에 연루됐습니다.')
@@ -704,6 +711,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            userId: Number($('userId').value),
             externalCallId: $('externalCallId').value,
             deviceId: $('deviceId').value,
             startedAt: $('startedAt').value,

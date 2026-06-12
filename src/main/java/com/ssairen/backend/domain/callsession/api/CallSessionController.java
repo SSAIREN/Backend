@@ -27,8 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Flutter 모바일 앱이 호출하는 통화 세션 REST API 집합이다.
- * 초기 일반 모니터링 단계에서는 5초 단위 STT를 REST로 업로드하고,
- * 위험도가 올라가면 이후 실시간 단계는 WebSocket으로 전환하는 흐름을 전제로 한다.
+ * MVP에서는 Flutter가 더미 userId를 보내고, Backend는 서버 기동 시 적재한 피해자/보호자 더미 데이터를 사용한다.
  */
 @RestController
 @RequestMapping("/api/mobile/call-sessions")
@@ -49,7 +48,7 @@ public class CallSessionController {
     @PostMapping
     @Operation(
             summary = "통화 세션 생성",
-            description = "Flutter 앱이 통화 감지를 시작할 때 호출한다. 같은 externalCallId가 이미 존재하면 기존 세션을 그대로 반환한다."
+            description = "Flutter 앱이 통화 감지를 시작할 때 호출한다. MVP 단계에서는 하드코딩된 userId로 피해자를 식별한다."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "통화 세션 생성 또는 기존 세션 반환"),
@@ -61,18 +60,19 @@ public class CallSessionController {
     })
     public ResponseEntity<CallSessionResponse> createSession(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Flutter가 생성한 외부 통화 ID와 피해자 기본 정보",
+                    description = "Flutter가 생성한 통화 ID와 MVP 피해자 식별용 userId",
                     required = true,
                     content = @Content(
                             schema = @Schema(implementation = CreateCallSessionRequest.class),
                             examples = @ExampleObject(value = """
                                     {
+                                      "userId": 1001,
                                       "externalCallId": "device-call-001",
                                       "deviceId": "victim-device-001",
                                       "startedAt": "2026-06-10T15:20:00+09:00",
                                       "phoneNumber": "01012345678",
                                       "victim": {
-                                        "name": "김OO",
+                                        "name": "김영희",
                                         "age": 71
                                       }
                                     }

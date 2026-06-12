@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import com.ssairen.backend.domain.callsession.analysis.TranscriptAnalysisGateway;
 import com.ssairen.backend.domain.callsession.analysis.dto.TranscriptAnalysisCommand;
 import com.ssairen.backend.domain.callsession.analysis.dto.TranscriptAnalysisResult;
@@ -30,17 +31,18 @@ class CallSessionControllerTest {
     private TranscriptAnalysisGateway transcriptAnalysisGateway;
 
     @Test
-    void Flutter_세션_생성_요청을_본문_기반_계약으로_받는다() throws Exception {
+    void Flutter_세션_생성_요청을_userId_기반_계약으로_받는다() throws Exception {
         mockMvc.perform(post("/api/mobile/call-sessions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "userId": 1001,
                                   "externalCallId": "device-call-controller-test",
                                   "deviceId": "victim-device-001",
                                   "startedAt": "2026-06-10T15:20:00+09:00",
                                   "phoneNumber": "01012345678",
                                   "victim": {
-                                    "name": "김OO",
+                                    "name": "김영희",
                                     "age": 71
                                   }
                                 }
@@ -66,13 +68,14 @@ class CallSessionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "userId": 1001,
                                   "externalCallId": "device-call-rest-analysis-test",
                                   "deviceId": "victim-device-002",
                                   "startedAt": "2026-06-10T15:20:00+09:00",
                                   "phoneNumber": "01099998888",
                                   "victim": {
-                                    "name": "박OO",
-                                    "age": 68
+                                    "name": "김영희",
+                                    "age": 71
                                   }
                                 }
                                 """))
@@ -80,7 +83,7 @@ class CallSessionControllerTest {
                 .getResponse()
                 .getContentAsString();
 
-        String sessionId = com.jayway.jsonpath.JsonPath.read(sessionResponse, "$.sessionId");
+        String sessionId = JsonPath.read(sessionResponse, "$.sessionId");
 
         mockMvc.perform(post("/api/mobile/call-sessions/{sessionId}/transcripts/analyze", sessionId)
                         .contentType(MediaType.APPLICATION_JSON)

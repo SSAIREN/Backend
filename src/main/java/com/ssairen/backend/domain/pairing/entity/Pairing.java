@@ -1,6 +1,7 @@
 package com.ssairen.backend.domain.pairing.entity;
 
 import com.ssairen.backend.domain.user.entity.User;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -17,6 +18,7 @@ public class Pairing {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "pairing_id")
     private Long pairingId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -27,6 +29,7 @@ public class Pairing {
     @JoinColumn(name = "guardian_id", nullable = false)
     private User guardian;
 
+    @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
     protected Pairing() {
@@ -36,5 +39,9 @@ public class Pairing {
         this.victim = victim;
         this.guardian = guardian;
         this.createdAt = OffsetDateTime.now();
+    }
+
+    public User getGuardian() {
+        return guardian;
     }
 }

@@ -19,12 +19,6 @@ import java.time.OffsetDateTime;
 @Table(name = "call_sessions")
 public class CallSession {
 
-    /*
-     * call_sessions 는 Flutter 실시간 업로드 제어를 위한 기술 테이블이다.
-     * 실제 피해자/사건 도메인은 users, cases 테이블에 두고
-     * 여기서는 sequence, 종료 여부, 분석 요청 시점 같은 전송 상태만 관리한다.
-     * JDBC column 오류를 줄이기 위해 실제 DB 컬럼명을 모두 명시적으로 고정한다.
-     */
     @Id
     @Column(name = "call_session_id", length = 36)
     private String id;
@@ -64,6 +58,9 @@ public class CallSession {
 
     @Column(name = "final_analysis_requested_at")
     private OffsetDateTime finalAnalysisRequestedAt;
+
+    @Column(name = "guardian_alert_sent_at")
+    private OffsetDateTime guardianAlertSentAt;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
@@ -116,6 +113,15 @@ public class CallSession {
         this.lastAnalysisRequestedSequence = lastTranscriptSequence;
         this.finalAnalysisRequestedAt = OffsetDateTime.now();
         this.updatedAt = this.finalAnalysisRequestedAt;
+        return true;
+    }
+
+    public boolean markGuardianAlertSentIfNeeded() {
+        if (this.guardianAlertSentAt != null) {
+            return false;
+        }
+        this.guardianAlertSentAt = OffsetDateTime.now();
+        this.updatedAt = this.guardianAlertSentAt;
         return true;
     }
 
