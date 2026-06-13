@@ -35,6 +35,9 @@ ssairen:
       model: ${SSAIREN_MOCK_OPEN_API_MODEL:gpt-4o-mini}
   transcript:
     analysis-threshold-characters: ${TRANSCRIPT_ANALYSIS_THRESHOLD_CHARACTERS:1000}
+  fcm:
+    enabled: ${FCM_ENABLED}
+    credentials-path: ${FCM_CREDENTIALS_PATH}
 
 springdoc:
   swagger-ui:
