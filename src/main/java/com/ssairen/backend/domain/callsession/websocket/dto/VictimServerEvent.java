@@ -18,6 +18,7 @@ public record VictimServerEvent(
                         "ANALYSIS_RESULT",
                         "ANALYSIS_ERROR",
                         "SESSION_COMPLETE_ACK",
+                        "GUARDIAN_REPLY",
                         "PONG"
                 },
                 example = "TRANSCRIPT_ACK"

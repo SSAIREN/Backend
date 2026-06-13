@@ -1,7 +1,9 @@
 package com.ssairen.backend.domain.callsession.repository;
 
 import com.ssairen.backend.domain.callsession.entity.CallSession;
+import com.ssairen.backend.domain.callsession.entity.CallSessionStatus;
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -19,4 +21,9 @@ public interface CallSessionRepository extends JpaRepository<CallSession, String
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from CallSession c where c.id = :id")
     Optional<CallSession> findByIdForUpdate(@Param("id") String id);
+
+    Optional<CallSession> findTopByVictimIdInAndStatusInOrderByStartedAtDesc(
+            Collection<Long> victimIds,
+            Collection<CallSessionStatus> statuses
+    );
 }

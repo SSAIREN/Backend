@@ -103,6 +103,12 @@ public class FraudCase {
         this.aiSummary = aiSummary;
         this.keywords = (keywords == null || keywords.isEmpty()) ? null : String.join(",", keywords);
     }
+
+    public void updateLocation(BigDecimal latitude, BigDecimal longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
     public void updateStatus(CaseStatus status, OffsetDateTime changedAt) {
         /*
          * 대시보드에서의 수동 상태 변경.
@@ -118,6 +124,7 @@ public class FraudCase {
             this.respondedAt = null;
         }
     }
+
     public void complete(OffsetDateTime startedAt, OffsetDateTime endedAt) {
         this.status = CaseStatus.COMPLETED;
         this.respondedAt = endedAt;

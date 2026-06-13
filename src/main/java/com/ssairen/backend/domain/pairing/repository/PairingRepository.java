@@ -8,5 +8,7 @@ public interface PairingRepository extends JpaRepository<Pairing, Long> {
 
     List<Pairing> findAllByVictimId(Long victimId);
 
+    List<Pairing> findAllByGuardianId(Long guardianId);
+
     boolean existsByVictimIdAndGuardianId(Long victimId, Long guardianId);
 }

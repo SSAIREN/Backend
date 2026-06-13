@@ -33,15 +33,18 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final CallSessionService callSessionService;
     private final TranscriptAnalysisService transcriptAnalysisService;
+    private final VictimSessionRegistry victimSessionRegistry;
 
     public VictimWebSocketHandler(
             ObjectMapper objectMapper,
             CallSessionService callSessionService,
-            TranscriptAnalysisService transcriptAnalysisService
+            TranscriptAnalysisService transcriptAnalysisService,
+            VictimSessionRegistry victimSessionRegistry
     ) {
         this.objectMapper = objectMapper;
         this.callSessionService = callSessionService;
         this.transcriptAnalysisService = transcriptAnalysisService;
+        this.victimSessionRegistry = victimSessionRegistry;
     }
 
     @Override
@@ -49,6 +52,7 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         String callSessionId = extractSessionId(session);
         CallSessionResponse callSession = callSessionService.getSession(callSessionId);
         session.getAttributes().put(SESSION_ID_ATTRIBUTE, callSessionId);
+        victimSessionRegistry.register(callSessionId, session);
 
         log.debug(
                 "Flutter WebSocket connected. sessionId={}, socketId={}, remoteAddress={}",
@@ -258,6 +262,7 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        unregister(session);
         log.debug(
                 "Flutter WebSocket transport error. sessionId={}, socketId={}, message={}",
                 session.getAttributes().get(SESSION_ID_ATTRIBUTE),
@@ -272,6 +277,7 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        unregister(session);
         log.debug(
                 "Flutter WebSocket closed. sessionId={}, socketId={}, closeCode={}, reason={}",
                 session.getAttributes().get(SESSION_ID_ATTRIBUTE),
@@ -280,5 +286,12 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
                 status.getReason()
         );
         super.afterConnectionClosed(session, status);
+    }
+
+    private void unregister(WebSocketSession session) {
+        Object callSessionId = session.getAttributes().get(SESSION_ID_ATTRIBUTE);
+        if (callSessionId != null) {
+            victimSessionRegistry.unregister(callSessionId.toString(), session);
+        }
     }
 }

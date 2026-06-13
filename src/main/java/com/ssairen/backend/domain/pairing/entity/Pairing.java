@@ -48,4 +48,8 @@ public class Pairing {
     public User getGuardian() {
         return guardian;
     }
+
+    public User getVictim() {
+        return victim;
+    }
 }
