@@ -9,7 +9,7 @@ import java.util.List;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record AiAnalysisCallbackRequest(
-        String callId,
+        String sessionId,
         String detectedScenario,
         String riskLevel,
         Double riskScore,

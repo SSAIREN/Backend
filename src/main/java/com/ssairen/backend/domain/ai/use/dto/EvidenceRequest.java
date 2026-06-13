@@ -7,8 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record EvidenceRequest(
-        String callId,
-        String userId,
+        String sessionId,
         String conversationText,
         Double riskScore,
         String scenario

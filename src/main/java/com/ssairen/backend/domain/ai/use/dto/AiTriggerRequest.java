@@ -6,7 +6,6 @@ package com.ssairen.backend.domain.ai.use.dto;
  */
 public record AiTriggerRequest(
         String sessionId,
-        String message,
-        String userId
+        String message
 ) {
 }

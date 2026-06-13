@@ -7,8 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record PoliceReportRequest(
-        String callId,
-        String userId,
+        String sessionId,
         Integer riskScore,
         String incidentType,
         String summary

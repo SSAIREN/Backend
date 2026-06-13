@@ -8,8 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record WarningBannerRequest(
-        String callId,
-        String userId,
+        String sessionId,
         String scenario,
         Double riskScore,
         String situationSummary,

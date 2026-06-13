@@ -25,15 +25,15 @@ public class AiUseService {
     }
 
     public AiTriggerResponse triggerDemo(AiTriggerRequest request) {
-        // call_id 를 null 로 보내면 FastAPI 가 새 call_id 를 생성한다.
-        AiDemoRunRequest demoRequest = new AiDemoRunRequest(request.message(), null, request.userId());
+        // FE가 넘긴 sessionId 를 그대로 AI 데모 입력으로 전달한다.
+        AiDemoRunRequest demoRequest = new AiDemoRunRequest(request.message(), request.sessionId());
         AiDemoRunResponse response = aiDemoClient.runDemo(demoRequest);
-        return new AiTriggerResponse(response.callId(), response.status());
+        return new AiTriggerResponse(response.sessionId(), response.status());
     }
 
     public void handleCallback(AiAnalysisCallbackRequest request) {
-        log.info("AI 종합 결과 콜백 수신: callId={}, riskLevel={}, riskScore={}",
-                request.callId(), request.riskLevel(), request.riskScore());
+        log.info("AI 종합 결과 콜백 수신: sessionId={}, riskLevel={}, riskScore={}",
+                request.sessionId(), request.riskLevel(), request.riskScore());
         // TODO: 추후 FraudCase 갱신 / 대시보드(WebSocket) 통지 / FE 결과 전달 처리. 현재는 수신만 하고 아무 동작 안 함.
     }
 }
