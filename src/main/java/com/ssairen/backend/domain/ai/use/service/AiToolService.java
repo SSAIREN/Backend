@@ -111,6 +111,8 @@ public class AiToolService {
      */
     @Transactional
     public ToolActionResponse familyGps(GpsRequest req) {
+        log.info("tool[check_family_gps] 수신: sessionId={}", req.sessionId());
+
         CallSession session = loadSession(req.sessionId());
         if (!session.markFamilyGpsNotifiedIfNeeded()) {
             log.info("tool[check_family_gps] 이미 발송된 세션이라 중복 호출을 건너뜁니다: sessionId={}", req.sessionId());
