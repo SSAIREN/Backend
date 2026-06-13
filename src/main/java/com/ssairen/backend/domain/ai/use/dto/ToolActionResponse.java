@@ -15,4 +15,11 @@ public record ToolActionResponse(
     public static ToolActionResponse ok(String tool, String message) {
         return new ToolActionResponse(tool, "SUCCESS", message);
     }
+
+    /**
+     * 세션당 한 번만 수행되는 tool 이 이미 수행되어 중복 호출을 건너뛴 경우의 응답이다.
+     */
+    public static ToolActionResponse skipped(String tool, String message) {
+        return new ToolActionResponse(tool, "SKIPPED", message);
+    }
 }

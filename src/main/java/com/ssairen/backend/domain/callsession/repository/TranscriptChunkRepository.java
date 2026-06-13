@@ -10,4 +10,6 @@ public interface TranscriptChunkRepository extends JpaRepository<TranscriptChunk
     Optional<TranscriptChunk> findByCallSessionIdAndSequence(String callSessionId, long sequence);
 
     List<TranscriptChunk> findAllByCallSessionIdAndSequenceLessThanEqualOrderBySequenceAsc(String callSessionId, long sequence);
+
+    List<TranscriptChunk> findAllByCallSessionIdOrderBySequenceAsc(String callSessionId);
 }

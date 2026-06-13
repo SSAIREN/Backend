@@ -61,7 +61,13 @@ public class CallSession {
 
     @Column(name = "dashboard_case_notified_at")
     private OffsetDateTime dashboardCaseNotifiedAt;
-  
+
+    @Column(name = "police_notified_at")
+    private OffsetDateTime policeNotifiedAt;
+
+    @Column(name = "family_gps_notified_at")
+    private OffsetDateTime familyGpsNotifiedAt;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -122,6 +128,32 @@ public class CallSession {
         }
         this.dashboardCaseNotifiedAt = OffsetDateTime.now();
         this.updatedAt = this.dashboardCaseNotifiedAt;
+        return true;
+    }
+
+    /**
+     * 경찰 대시보드 통지를 세션당 한 번만 보내도록 보장한다.
+     * 아직 통지하지 않았으면 시각을 기록하고 true, 이미 통지했으면 false 를 반환한다.
+     */
+    public boolean markPoliceNotifiedIfNeeded() {
+        if (this.policeNotifiedAt != null) {
+            return false;
+        }
+        this.policeNotifiedAt = OffsetDateTime.now();
+        this.updatedAt = this.policeNotifiedAt;
+        return true;
+    }
+
+    /**
+     * 가족 GPS(보호자 FCM) 발송을 세션당 한 번만 보내도록 보장한다.
+     * 아직 발송하지 않았으면 시각을 기록하고 true, 이미 발송했으면 false 를 반환한다.
+     */
+    public boolean markFamilyGpsNotifiedIfNeeded() {
+        if (this.familyGpsNotifiedAt != null) {
+            return false;
+        }
+        this.familyGpsNotifiedAt = OffsetDateTime.now();
+        this.updatedAt = this.familyGpsNotifiedAt;
         return true;
     }
 
