@@ -42,7 +42,7 @@ public class FraudCase {
     private Integer riskScore;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "phishing_type", length = 20)
+    @Column(name = "phishing_type", length = 50)
     private PhishingType phishingType;
 
     @Enumerated(EnumType.STRING)
