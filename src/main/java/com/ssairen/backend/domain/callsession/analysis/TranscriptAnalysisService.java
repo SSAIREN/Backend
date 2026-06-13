@@ -7,7 +7,6 @@ import com.ssairen.backend.domain.callsession.entity.TranscriptChunk;
 import com.ssairen.backend.domain.callsession.repository.CallSessionRepository;
 import com.ssairen.backend.domain.callsession.repository.TranscriptChunkRepository;
 import com.ssairen.backend.domain.casefile.service.DashboardNotificationService;
-import com.ssairen.backend.domain.notification.service.GuardianAlertService;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
 import com.ssairen.backend.global.logging.DebugExecutionTimer;
@@ -27,7 +26,6 @@ public class TranscriptAnalysisService {
     private final CallSessionRepository callSessionRepository;
     private final TranscriptChunkRepository transcriptChunkRepository;
     private final TranscriptAnalysisGateway transcriptAnalysisGateway;
-    private final GuardianAlertService guardianAlertService;
     private final DashboardNotificationService dashboardNotificationService;
     private final int dashboardNewCaseRiskScore;
 
@@ -35,14 +33,12 @@ public class TranscriptAnalysisService {
             CallSessionRepository callSessionRepository,
             TranscriptChunkRepository transcriptChunkRepository,
             TranscriptAnalysisGateway transcriptAnalysisGateway,
-            GuardianAlertService guardianAlertService,
             DashboardNotificationService dashboardNotificationService,
             @Value("${ssairen.analysis.dashboard-new-case-risk-score:76}") int dashboardNewCaseRiskScore
     ) {
         this.callSessionRepository = callSessionRepository;
         this.transcriptChunkRepository = transcriptChunkRepository;
         this.transcriptAnalysisGateway = transcriptAnalysisGateway;
-        this.guardianAlertService = guardianAlertService;
         this.dashboardNotificationService = dashboardNotificationService;
         this.dashboardNewCaseRiskScore = dashboardNewCaseRiskScore;
     }
@@ -98,7 +94,6 @@ public class TranscriptAnalysisService {
         );
 
         notifyDashboardIfAnomalyDetected(session, result);
-        guardianAlertService.sendGuardianAlertsIfNeeded(session, result);
         return result;
     }
 

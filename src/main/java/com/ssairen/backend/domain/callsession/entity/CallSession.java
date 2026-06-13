@@ -59,12 +59,9 @@ public class CallSession {
     @Column(name = "final_analysis_requested_at")
     private OffsetDateTime finalAnalysisRequestedAt;
 
-    @Column(name = "guardian_alert_sent_at")
-    private OffsetDateTime guardianAlertSentAt;
-
     @Column(name = "dashboard_case_notified_at")
     private OffsetDateTime dashboardCaseNotifiedAt;
-
+  
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -118,16 +115,7 @@ public class CallSession {
         this.updatedAt = this.finalAnalysisRequestedAt;
         return true;
     }
-
-    public boolean markGuardianAlertSentIfNeeded() {
-        if (this.guardianAlertSentAt != null) {
-            return false;
-        }
-        this.guardianAlertSentAt = OffsetDateTime.now();
-        this.updatedAt = this.guardianAlertSentAt;
-        return true;
-    }
-
+  
     public boolean markDashboardCaseNotifiedIfNeeded() {
         if (this.dashboardCaseNotifiedAt != null) {
             return false;
