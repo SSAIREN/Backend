@@ -15,14 +15,17 @@ import com.ssairen.backend.domain.user.entity.UserRole;
 import com.ssairen.backend.domain.user.repository.UserRepository;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
+import com.ssairen.backend.global.logging.DebugExecutionTimer;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 public class CallSessionService {
 
     private final CallSessionRepository callSessionRepository;
@@ -47,16 +50,24 @@ public class CallSessionService {
 
     @Transactional
     public CallSessionResponse createSession(CreateCallSessionRequest request) {
-        return callSessionRepository.findByExternalCallId(request.externalCallId())
+        return DebugExecutionTimer.measure(
+                        log,
+                        "db-read",
+                        "callSessionRepository.findByExternalCallId",
+                        "externalCallId=" + request.externalCallId(),
+                        () -> callSessionRepository.findByExternalCallId(request.externalCallId())
+                )
                 .map(CallSessionResponse::from)
                 .orElseGet(() -> {
-                    /*
-                     * MVP 단계에서는 Flutter가 하드코딩한 userId를 보내면
-                     * 서버가 기동 시 미리 적재한 더미 피해자 사용자를 그대로 찾아 세션에 연결한다.
-                     * victim payload는 기존 호환성을 유지하면서 기본 프로필 갱신 용도로만 쓴다.
-                     */
                     User victim = resolveVictim(request);
-                    FraudCase fraudCase = fraudCaseRepository.save(new FraudCase(victim, request.startedAt()));
+                    FraudCase fraudCase = DebugExecutionTimer.measure(
+                            log,
+                            "db-write",
+                            "fraudCaseRepository.save",
+                            "victimId=" + victim.getId(),
+                            () -> fraudCaseRepository.save(new FraudCase(victim, request.startedAt()))
+                    );
+                  
                     CallSession session = new CallSession(
                             UUID.randomUUID().toString(),
                             request.externalCallId(),
@@ -65,7 +76,14 @@ public class CallSessionService {
                             fraudCase,
                             request.startedAt()
                     );
-                    return CallSessionResponse.from(callSessionRepository.save(session));
+
+                    return CallSessionResponse.from(DebugExecutionTimer.measure(
+                            log,
+                            "db-write",
+                            "callSessionRepository.save",
+                            "sessionId=" + session.getId() + ", externalCallId=" + request.externalCallId(),
+                            () -> callSessionRepository.save(session)
+                    ));
                 });
     }
 
@@ -116,9 +134,21 @@ public class CallSessionService {
                 endedAtMs,
                 finalChunk
         );
-        transcriptChunkRepository.save(chunk);
+        DebugExecutionTimer.measure(
+                log,
+                "db-write",
+                "transcriptChunkRepository.save",
+                "sessionId=" + sessionId + ", chunkId=" + chunkId + ", sequence=" + sequence,
+                () -> transcriptChunkRepository.save(chunk)
+        );
 
-        session.acceptTranscript(endedAtMs, text.length());
+        DebugExecutionTimer.measure(
+                log,
+                "db-update",
+                "callSession.acceptTranscript",
+                "sessionId=" + sessionId + ", sequence=" + sequence,
+                () -> session.acceptTranscript(endedAtMs, text.length())
+        );
 
         return new TranscriptAcceptResult(
                 chunkId,
@@ -140,8 +170,20 @@ public class CallSessionService {
 
         boolean finalAnalysisQueued = false;
         if (session.isAcceptingTranscript()) {
-            finalAnalysisQueued = session.queueFinalAnalysisIfNeeded(lastStoredSequence);
-            session.complete(endedAt);
+            finalAnalysisQueued = DebugExecutionTimer.measure(
+                    log,
+                    "db-update",
+                    "callSession.queueFinalAnalysisIfNeeded",
+                    "sessionId=" + sessionId + ", lastStoredSequence=" + lastStoredSequence,
+                    () -> session.queueFinalAnalysisIfNeeded(lastStoredSequence)
+            );
+            DebugExecutionTimer.measure(
+                    log,
+                    "db-update",
+                    "callSession.complete",
+                    "sessionId=" + sessionId,
+                    () -> session.complete(endedAt)
+            );
         }
 
         return new SessionCompletionResult(CallSessionResponse.from(session), finalAnalysisQueued);
@@ -154,13 +196,19 @@ public class CallSessionService {
             String text,
             long expectedSequence
     ) {
-        TranscriptChunk storedChunk = transcriptChunkRepository.findByCallSessionIdAndSequence(sessionId, sequence)
+        TranscriptChunk storedChunk = DebugExecutionTimer.measure(
+                        log,
+                        "db-read",
+                        "transcriptChunkRepository.findByCallSessionIdAndSequence",
+                        "sessionId=" + sessionId + ", sequence=" + sequence,
+                        () -> transcriptChunkRepository.findByCallSessionIdAndSequence(sessionId, sequence)
+                )
                 .orElseThrow(() -> sequenceMismatch(expectedSequence));
 
         if (!storedChunk.hasSamePayload(chunkId, text)) {
             throw new BusinessException(
                     ErrorCode.DUPLICATE_TRANSCRIPT_CONFLICT,
-                    "이미 저장된 sequence에 다른 chunk payload가 도착했습니다.",
+                    "이미 수신한 sequence에 다른 chunk payload가 들어왔습니다.",
                     Map.of("sequence", sequence)
             );
         }
@@ -169,14 +217,26 @@ public class CallSessionService {
     }
 
     private User resolveVictim(CreateCallSessionRequest request) {
-        User victim = userRepository.findByIdAndRole(request.userId(), UserRole.VICTIM)
+        User victim = DebugExecutionTimer.measure(
+                        log,
+                        "db-read",
+                        "userRepository.findByIdAndRole",
+                        "userId=" + request.userId() + ", role=" + UserRole.VICTIM,
+                        () -> userRepository.findByIdAndRole(request.userId(), UserRole.VICTIM)
+                )
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.INVALID_REQUEST,
-                        "MVP 더미 피해자 userId를 찾을 수 없습니다.",
+                        "MVP 플로우를 위해 userId를 찾을 수 없습니다.",
                         Map.of("userId", request.userId())
                 ));
 
-        victim.updateVictimProfile(request.victim().age(), request.phoneNumber());
+        DebugExecutionTimer.measure(
+                log,
+                "db-update",
+                "victim.updateVictimProfile",
+                "userId=" + victim.getId(),
+                () -> victim.updateVictimProfile(request.victim().age(), request.phoneNumber())
+        );
         return victim;
     }
 
@@ -189,12 +249,24 @@ public class CallSessionService {
     }
 
     private CallSession findSession(String sessionId) {
-        return callSessionRepository.findById(sessionId)
+        return DebugExecutionTimer.measure(
+                        log,
+                        "db-read",
+                        "callSessionRepository.findById",
+                        "sessionId=" + sessionId,
+                        () -> callSessionRepository.findById(sessionId)
+                )
                 .orElseThrow(() -> new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "통화 세션을 찾을 수 없습니다."));
     }
 
     private CallSession findSessionForUpdate(String sessionId) {
-        return callSessionRepository.findByIdForUpdate(sessionId)
+        return DebugExecutionTimer.measure(
+                        log,
+                        "db-read",
+                        "callSessionRepository.findByIdForUpdate",
+                        "sessionId=" + sessionId,
+                        () -> callSessionRepository.findByIdForUpdate(sessionId)
+                )
                 .orElseThrow(() -> new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "통화 세션을 찾을 수 없습니다."));
     }
 }

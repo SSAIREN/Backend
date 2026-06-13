@@ -81,6 +81,10 @@ public class User {
         this.phone = phone;
     }
 
+    public void updateFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
+    }
+
     public Long getId() {
         return id;
     }

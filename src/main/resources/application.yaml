@@ -1,4 +1,11 @@
+logging:
+  level:
+    com.ssairen.backend: DEBUG
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+
 spring:
+
   application:
     name: backend
 
@@ -15,12 +22,12 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-    show-sql: true
+    show-sql: false
     open-in-view: false
 
 ssairen:
   websocket:
-    allowed-origins: "*"
+    allowed-origins: http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000
   analysis:
     provider: ${SSAIREN_ANALYSIS_PROVIDER:mock-open-api}
     websocket-escalation-threshold: ${SSAIREN_WEBSOCKET_ESCALATION_THRESHOLD:70}
@@ -30,12 +37,19 @@ ssairen:
       rest-path: ${SSAIREN_FASTAPI_REST_ANALYSIS_PATH:/api/v1/call-analysis/rest}
       websocket-path: ${SSAIREN_FASTAPI_WEBSOCKET_ANALYSIS_PATH:/api/v1/call-analysis/websocket}
     mock-open-api:
-      base-url: ${SSAIREN_MOCK_OPEN_API_BASE_URL:https://api.openai.com}
-      chat-path: ${SSAIREN_MOCK_OPEN_API_CHAT_PATH:/v1/chat/completions}
+      base-url: ${SSAIREN_MOCK_OPEN_API_BASE_URL:https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com}
+      chat-path: ${SSAIREN_MOCK_OPEN_API_CHAT_PATH:/v1beta/models/{model}:generateContent}
       api-key: ${SSAIREN_MOCK_OPEN_API_API_KEY:}
-      model: ${SSAIREN_MOCK_OPEN_API_MODEL:gpt-4o-mini}
+      model: ${SSAIREN_MOCK_OPEN_API_MODEL:gemini-3.5-flash}
   transcript:
     analysis-threshold-characters: ${TRANSCRIPT_ANALYSIS_THRESHOLD_CHARACTERS:1000}
+  fcm:
+    enabled: ${FCM_ENABLED}
+    credentials-path: ${FCM_CREDENTIALS_PATH}
+  ai:
+    use:
+      fastapi-url: ${SSAIREN_AI_USE_FASTAPI_URL:http://localhost:8000}
+      demo-path: ${SSAIREN_AI_USE_DEMO_PATH:/api/v1/pipeline-a/runs/demo}
 
 springdoc:
   swagger-ui:
