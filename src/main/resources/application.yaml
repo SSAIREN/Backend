@@ -29,10 +29,10 @@ ssairen:
       rest-path: ${SSAIREN_FASTAPI_REST_ANALYSIS_PATH:/api/v1/call-analysis/rest}
       websocket-path: ${SSAIREN_FASTAPI_WEBSOCKET_ANALYSIS_PATH:/api/v1/call-analysis/websocket}
     mock-open-api:
-      base-url: ${SSAIREN_MOCK_OPEN_API_BASE_URL:https://api.openai.com}
-      chat-path: ${SSAIREN_MOCK_OPEN_API_CHAT_PATH:/v1/chat/completions}
+      base-url: ${SSAIREN_MOCK_OPEN_API_BASE_URL:https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com}
+      chat-path: ${SSAIREN_MOCK_OPEN_API_CHAT_PATH:/v1beta/models/{model}:generateContent}
       api-key: ${SSAIREN_MOCK_OPEN_API_API_KEY:}
-      model: ${SSAIREN_MOCK_OPEN_API_MODEL:gpt-4o-mini}
+      model: ${SSAIREN_MOCK_OPEN_API_MODEL:gemini-3.5-flash}
   transcript:
     analysis-threshold-characters: ${TRANSCRIPT_ANALYSIS_THRESHOLD_CHARACTERS:1000}
   fcm:

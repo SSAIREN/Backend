@@ -10,7 +10,6 @@ import com.ssairen.backend.global.error.ErrorCode;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -45,10 +44,10 @@ public class MockOpenApiClient {
 
     public MockOpenApiClient(
             ObjectMapper objectMapper,
-            @Value("${ssairen.analysis.mock-open-api.base-url:https://api.openai.com}") String baseUrl,
-            @Value("${ssairen.analysis.mock-open-api.chat-path:/v1/chat/completions}") String chatPath,
+            @Value("${ssairen.analysis.mock-open-api.base-url:https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com}") String baseUrl,
+            @Value("${ssairen.analysis.mock-open-api.chat-path:/v1beta/models/{model}:generateContent}") String chatPath,
             @Value("${ssairen.analysis.mock-open-api.api-key:}") String apiKey,
-            @Value("${ssairen.analysis.mock-open-api.model:gpt-4o-mini}") String model
+            @Value("${ssairen.analysis.mock-open-api.model:gemini-3.5-flash}") String model
     ) {
         this.objectMapper = objectMapper;
         this.restClient = RestClient.builder().baseUrl(baseUrl).build();
@@ -67,20 +66,21 @@ public class MockOpenApiClient {
         }
 
         try {
-            OpenAiChatCompletionResponse response = restClient.post()
-                    .uri(chatPath)
+            GeminiGenerateContentResponse response = restClient.post()
+                    .uri(builder -> builder
+                            .path(resolveChatPath())
+                            .queryParam("key", apiKey)
+                            .build())
                     .contentType(MediaType.APPLICATION_JSON)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .body(new OpenAiChatCompletionRequest(
-                            model,
+                    .body(new GeminiGenerateContentRequest(
+                            new SystemInstruction(List.of(new Part(SYSTEM_PROMPT))),
                             List.of(
-                                    new ChatMessage("system", SYSTEM_PROMPT),
-                                    new ChatMessage("user", buildUserPrompt(command, channel))
+                                    new Content(List.of(new Part(buildUserPrompt(command, channel))))
                             ),
-                            new ResponseFormat("json_object")
+                            new GenerationConfig("application/json")
                     ))
                     .retrieve()
-                    .body(OpenAiChatCompletionResponse.class);
+                    .body(GeminiGenerateContentResponse.class);
 
             String content = extractContent(response);
             StructuredAnalysisResponse parsed = objectMapper.readValue(content, StructuredAnalysisResponse.class);
@@ -101,6 +101,10 @@ public class MockOpenApiClient {
                     Map.of("channel", channel, "message", exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage())
             );
         }
+    }
+
+    private String resolveChatPath() {
+        return chatPath.replace("{model}", model);
     }
 
     private String buildUserPrompt(TranscriptAnalysisCommand command, String channel) {
@@ -142,16 +146,26 @@ public class MockOpenApiClient {
         );
     }
 
-    private String extractContent(OpenAiChatCompletionResponse response) {
-        if (response == null || response.choices() == null || response.choices().isEmpty()) {
+    private String extractContent(GeminiGenerateContentResponse response) {
+        if (response == null || response.candidates() == null || response.candidates().isEmpty()) {
             throw new IllegalStateException("Open API response is empty.");
         }
 
-        ChatChoice firstChoice = response.choices().getFirst();
-        if (firstChoice.message() == null || firstChoice.message().content() == null || firstChoice.message().content().isBlank()) {
+        Candidate firstCandidate = response.candidates().getFirst();
+        if (firstCandidate.content() == null || firstCandidate.content().parts() == null || firstCandidate.content().parts().isEmpty()) {
+            throw new IllegalStateException("Open API candidate content is empty.");
+        }
+
+        String text = firstCandidate.content().parts().stream()
+                .map(Part::text)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElse("");
+
+        if (text.isBlank()) {
             throw new IllegalStateException("Open API message content is empty.");
         }
-        return firstChoice.message().content();
+        return text;
     }
 
     private int clampRiskScore(Integer riskScore) {
@@ -173,29 +187,31 @@ public class MockOpenApiClient {
         return value == null ? "" : value;
     }
 
-    private record OpenAiChatCompletionRequest(
-            String model,
-            List<ChatMessage> messages,
-            ResponseFormat response_format
+    private record GeminiGenerateContentRequest(
+            SystemInstruction systemInstruction,
+            List<Content> contents,
+            GenerationConfig generationConfig
     ) {
     }
 
-    private record ChatMessage(String role, String content) {
+    private record SystemInstruction(List<Part> parts) {
     }
 
-    private record ResponseFormat(String type) {
+    private record Content(List<Part> parts) {
+    }
+
+    private record Part(String text) {
+    }
+
+    private record GenerationConfig(String responseMimeType) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record OpenAiChatCompletionResponse(List<ChatChoice> choices) {
+    private record GeminiGenerateContentResponse(List<Candidate> candidates) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record ChatChoice(ChatMessageContent message) {
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private record ChatMessageContent(String content) {
+    private record Candidate(Content content) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
