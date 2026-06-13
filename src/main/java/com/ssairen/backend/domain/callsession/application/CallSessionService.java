@@ -10,7 +10,6 @@ import com.ssairen.backend.domain.callsession.repository.TranscriptChunkReposito
 import com.ssairen.backend.domain.callsession.websocket.dto.TranscriptAcceptResult;
 import com.ssairen.backend.domain.casefile.entity.FraudCase;
 import com.ssairen.backend.domain.casefile.repository.FraudCaseRepository;
-import com.ssairen.backend.domain.casefile.service.DashboardNotificationService;
 import com.ssairen.backend.domain.user.entity.User;
 import com.ssairen.backend.domain.user.entity.UserRole;
 import com.ssairen.backend.domain.user.repository.UserRepository;
@@ -30,7 +29,6 @@ public class CallSessionService {
     private final TranscriptChunkRepository transcriptChunkRepository;
     private final UserRepository userRepository;
     private final FraudCaseRepository fraudCaseRepository;
-    private final DashboardNotificationService dashboardNotificationService;
     private final long analysisThresholdCharacters;
 
     public CallSessionService(
@@ -38,14 +36,12 @@ public class CallSessionService {
             TranscriptChunkRepository transcriptChunkRepository,
             UserRepository userRepository,
             FraudCaseRepository fraudCaseRepository,
-            DashboardNotificationService dashboardNotificationService,
             @Value("${ssairen.transcript.analysis-threshold-characters:1000}") long analysisThresholdCharacters
     ) {
         this.callSessionRepository = callSessionRepository;
         this.transcriptChunkRepository = transcriptChunkRepository;
         this.userRepository = userRepository;
         this.fraudCaseRepository = fraudCaseRepository;
-        this.dashboardNotificationService = dashboardNotificationService;
         this.analysisThresholdCharacters = analysisThresholdCharacters;
     }
 
@@ -61,7 +57,6 @@ public class CallSessionService {
                      */
                     User victim = resolveVictim(request);
                     FraudCase fraudCase = fraudCaseRepository.save(new FraudCase(victim, request.startedAt()));
-                    dashboardNotificationService.broadcastNewCase(fraudCase);
                     CallSession session = new CallSession(
                             UUID.randomUUID().toString(),
                             request.externalCallId(),

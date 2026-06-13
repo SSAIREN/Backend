@@ -16,6 +16,7 @@ import com.ssairen.backend.domain.casefile.entity.FraudCase;
 import com.ssairen.backend.domain.casefile.entity.PhishingType;
 import com.ssairen.backend.domain.casefile.repository.FraudCaseRepository;
 import com.ssairen.backend.domain.responseaction.entity.ResponseAction;
+import com.ssairen.backend.domain.responseaction.entity.ResponseActionStatus;
 import com.ssairen.backend.domain.responseaction.entity.ResponseActionType;
 import com.ssairen.backend.domain.responseaction.repository.ResponseActionRepository;
 import com.ssairen.backend.domain.user.entity.User;
@@ -41,6 +42,9 @@ class CaseDashboardServiceTest {
 
     @Mock
     private ResponseActionRepository responseActionRepository;
+
+    @Mock
+    private DashboardNotificationService dashboardNotificationService;
 
     @InjectMocks
     private CaseDashboardService caseDashboardService;
@@ -167,6 +171,22 @@ class CaseDashboardServiceTest {
         assertThat(response.success()).isTrue();
         assertThat(fraudCase.getStatus()).isEqualTo(CaseStatus.COMPLETED);
         assertThat(fraudCase.getRespondedAt()).isNotNull();
+    }
+
+    @Test
+    void 케이스_상태를_완료로_변경하면_대응조치가_완료처리되고_ACTION_UPDATE가_브로드캐스트된다() {
+        FraudCase fraudCase = fraudCase(CaseStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(fraudCase, "id", 1L);
+        given(fraudCaseRepository.findById(1L)).willReturn(Optional.of(fraudCase));
+
+        ResponseAction action = new ResponseAction(fraudCase, ResponseActionType.GPS);
+        given(responseActionRepository.findByFraudCaseIdOrderByExecutedAtAsc(1L)).willReturn(List.of(action));
+
+        caseDashboardService.updateStatus(1L, CaseStatus.COMPLETED);
+
+        assertThat(action.getStatus()).isEqualTo(ResponseActionStatus.COMPLETED);
+        assertThat(action.getExecutedAt()).isNotNull();
+        verify(dashboardNotificationService).broadcastActionUpdate(1L, ResponseActionType.GPS, ResponseActionStatus.COMPLETED);
     }
 
     @Test
