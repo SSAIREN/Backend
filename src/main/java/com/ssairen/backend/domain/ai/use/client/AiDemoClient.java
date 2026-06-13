@@ -4,7 +4,9 @@ import com.ssairen.backend.domain.ai.use.dto.AiDemoRunRequest;
 import com.ssairen.backend.domain.ai.use.dto.AiDemoRunResponse;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
+import com.ssairen.backend.global.logging.DebugExecutionTimer;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -14,6 +16,7 @@ import org.springframework.web.client.RestClient;
  * AI(FastAPI)의 데모 파이프라인 트리거 endpoint(POST /api/v1/pipeline-a/runs/demo)를 호출하는 RestClient다.
  */
 @Component
+@Slf4j
 public class AiDemoClient {
 
     private final RestClient restClient;
@@ -29,12 +32,18 @@ public class AiDemoClient {
 
     public AiDemoRunResponse runDemo(AiDemoRunRequest request) {
         try {
-            AiDemoRunResponse response = restClient.post()
-                    .uri(demoPath)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .body(AiDemoRunResponse.class);
+            AiDemoRunResponse response = DebugExecutionTimer.measure(
+                    log,
+                    "external-rest",
+                    "aiDemoClient.runDemo",
+                    "path=" + demoPath,
+                    () -> restClient.post()
+                            .uri(demoPath)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(request)
+                            .retrieve()
+                            .body(AiDemoRunResponse.class)
+            );
 
             if (response == null) {
                 throw new IllegalStateException("FastAPI demo response is empty.");

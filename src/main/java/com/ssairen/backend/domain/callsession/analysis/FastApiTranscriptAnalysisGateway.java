@@ -6,8 +6,10 @@ import com.ssairen.backend.domain.callsession.analysis.dto.TranscriptAnalysisRes
 import com.ssairen.backend.domain.casefile.entity.PhishingType;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
+import com.ssairen.backend.global.logging.DebugExecutionTimer;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
@@ -16,6 +18,7 @@ import org.springframework.web.client.RestClient;
 
 @Component
 @ConditionalOnProperty(name = "ssairen.analysis.provider", havingValue = "fastapi")
+@Slf4j
 public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGateway {
 
     private final RestClient restClient;
@@ -48,22 +51,28 @@ public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGatew
             String channel
     ) {
         try {
-            FastApiAnalysisResponse response = restClient.post()
-                    .uri(path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(new FastApiAnalysisRequest(
-                            command.sessionId(),
-                            command.chunkId(),
-                            command.sequence(),
-                            command.chunkTranscript(),
-                            command.conversationContext(),
-                            command.victimName(),
-                            command.victimAge(),
-                            command.victimPhone(),
-                            channel
-                    ))
-                    .retrieve()
-                    .body(FastApiAnalysisResponse.class);
+            FastApiAnalysisResponse response = DebugExecutionTimer.measure(
+                    log,
+                    "external-rest",
+                    "fastApiTranscriptAnalysis.request",
+                    "channel=" + channel + ", path=" + path + ", sessionId=" + command.sessionId(),
+                    () -> restClient.post()
+                            .uri(path)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(new FastApiAnalysisRequest(
+                                    command.sessionId(),
+                                    command.chunkId(),
+                                    command.sequence(),
+                                    command.chunkTranscript(),
+                                    command.conversationContext(),
+                                    command.victimName(),
+                                    command.victimAge(),
+                                    command.victimPhone(),
+                                    channel
+                            ))
+                            .retrieve()
+                            .body(FastApiAnalysisResponse.class)
+            );
 
             if (response == null) {
                 throw new IllegalStateException("FastAPI response is empty.");
