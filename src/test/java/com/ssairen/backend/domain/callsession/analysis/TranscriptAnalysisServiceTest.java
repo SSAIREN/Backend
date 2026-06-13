@@ -14,7 +14,6 @@ import com.ssairen.backend.domain.callsession.repository.TranscriptChunkReposito
 import com.ssairen.backend.domain.casefile.entity.FraudCase;
 import com.ssairen.backend.domain.casefile.entity.PhishingType;
 import com.ssairen.backend.domain.casefile.service.DashboardNotificationService;
-import com.ssairen.backend.domain.notification.service.GuardianAlertService;
 import com.ssairen.backend.domain.user.entity.User;
 import com.ssairen.backend.domain.user.entity.UserRole;
 import java.time.OffsetDateTime;
@@ -41,9 +40,6 @@ class TranscriptAnalysisServiceTest {
     private TranscriptAnalysisGateway transcriptAnalysisGateway;
 
     @Mock
-    private GuardianAlertService guardianAlertService;
-
-    @Mock
     private DashboardNotificationService dashboardNotificationService;
 
     private TranscriptAnalysisService transcriptAnalysisService;
@@ -57,7 +53,6 @@ class TranscriptAnalysisServiceTest {
                 callSessionRepository,
                 transcriptChunkRepository,
                 transcriptAnalysisGateway,
-                guardianAlertService,
                 dashboardNotificationService,
                 76
         );
