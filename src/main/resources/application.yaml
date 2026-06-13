@@ -17,3 +17,26 @@ spring:
         format_sql: true
     show-sql: true
     open-in-view: false
+
+ssairen:
+  websocket:
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:*}
+  analysis:
+    websocket-escalation-threshold: ${SSAIREN_WEBSOCKET_ESCALATION_THRESHOLD:70}
+    fastapi:
+      url: ${SSAIREN_FASTAPI_URL:http://localhost:8000}
+      rest-path: ${SSAIREN_FASTAPI_REST_ANALYSIS_PATH:/api/v1/call-analysis/rest}
+      websocket-path: ${SSAIREN_FASTAPI_WEBSOCKET_ANALYSIS_PATH:/api/v1/call-analysis/websocket}
+  transcript:
+    analysis-threshold-characters: ${TRANSCRIPT_ANALYSIS_THRESHOLD_CHARACTERS:1000}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+server:
+  port: 8080

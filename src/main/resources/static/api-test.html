@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSAIREN Dynamic API Tester</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07111d;
+        --panel: rgba(15, 25, 43, 0.94);
+        --panel-soft: #162540;
+        --panel-strong: #0c182c;
+        --line: #304766;
+        --text: #eef4ff;
+        --muted: #93a9cc;
+        --primary: #4f8cff;
+        --primary-2: #7fb1ff;
+        --danger: #d95757;
+        --success: #35c57a;
+        --warning: #ffb648;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        font-family: Arial, sans-serif;
+        background:
+          radial-gradient(circle at top right, rgba(79, 140, 255, 0.18), transparent 26%),
+          radial-gradient(circle at top left, rgba(53, 197, 122, 0.1), transparent 24%),
+          linear-gradient(180deg, #07111d, #0b1628 48%, #07111d);
+      }
+
+      header {
+        padding: 26px 28px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      header h1 {
+        margin: 0 0 8px;
+        font-size: 25px;
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .top-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(640px, 1.2fr) minmax(360px, 0.8fr);
+        gap: 18px;
+        padding: 20px;
+      }
+
+      .column {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .full {
+        grid-column: 1 / -1;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .stat {
+        padding: 14px;
+        background: var(--panel-soft);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+      }
+
+      .stat .label {
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+
+      .stat .value {
+        font-size: 18px;
+        font-weight: 700;
+        word-break: break-word;
+      }
+
+      .mini {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: var(--panel-soft);
+        color: var(--text);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font: inherit;
+      }
+
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+
+      button,
+      a.button {
+        border: 0;
+        border-radius: 10px;
+        background: var(--primary);
+        color: white;
+        cursor: pointer;
+        padding: 10px 14px;
+        font-weight: 700;
+        font-size: 13px;
+        text-decoration: none;
+      }
+
+      button.secondary,
+      a.secondary {
+        background: #40557b;
+      }
+
+      button.ghost {
+        background: #263754;
+      }
+
+      button.danger {
+        background: var(--danger);
+      }
+
+      button.success {
+        background: #238f58;
+      }
+
+      button.warning {
+        background: #a86d13;
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      .pill-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .pill {
+        padding: 7px 11px;
+        border-radius: 999px;
+        background: #1c2c49;
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .hint {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--danger);
+      }
+
+      .dot.connected {
+        background: var(--success);
+      }
+
+      .queue {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .queue-item {
+        border: 1px solid var(--line);
+        background: var(--panel-strong);
+        border-radius: 14px;
+        padding: 12px;
+      }
+
+      .queue-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .queue-mode {
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-weight: 700;
+      }
+
+      .mode-rest {
+        background: rgba(79, 140, 255, 0.18);
+        color: var(--primary-2);
+      }
+
+      .mode-socket {
+        background: rgba(255, 182, 72, 0.16);
+        color: var(--warning);
+      }
+
+      .queue-text {
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .queue-meta {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .queue-empty {
+        padding: 22px 12px;
+        border-radius: 14px;
+        background: var(--panel-strong);
+        border: 1px dashed var(--line);
+        color: var(--muted);
+        text-align: center;
+        font-size: 13px;
+      }
+
+      #log {
+        min-height: 680px;
+        max-height: calc(100vh - 180px);
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #040a14;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        font: 12px/1.6 monospace;
+      }
+
+      .log-in {
+        color: #9ee6be;
+      }
+
+      .log-out {
+        color: #98c4ff;
+      }
+
+      .log-error {
+        color: #ffb6b6;
+      }
+
+      .log-info {
+        color: #ffdb9e;
+      }
+
+      @media (max-width: 1100px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+
+        .stats,
+        .grid-4 {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        #log {
+          min-height: 320px;
+          max-height: 520px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .grid,
+        .stats,
+        .grid-4 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>SSAIREN Flutter ↔ Spring Boot Dynamic Tester</h1>
+      <p>
+        통화 세션 생성 → 초기 REST 분석 → 위험도 상승 시 WebSocket 전환까지 한 페이지에서 연속 테스트할 수 있는 콘솔입니다.
+        샘플 문장, 청크 큐, 배치 실행, 실시간 상태판을 함께 제공합니다.
+      </p>
+      <div class="top-actions">
+        <a class="button secondary" href="/swagger-ui.html" target="_blank">Swagger 열기</a>
+        <button id="presetNormal">정상 시나리오 채우기</button>
+        <button id="presetDanger" class="warning">고위험 시나리오 채우기</button>
+        <button id="resetAll" class="ghost">폼 전체 초기화</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="column">
+        <section>
+          <h2>1. 세션 입력</h2>
+          <div class="grid">
+            <label>
+              MVP User ID
+              <input id="userId" type="number" min="1" value="1001" />
+            </label>
+            <label>
+              Device ID
+              <input id="deviceId" value="api-test-device" />
+            </label>
+            <label>
+              External Call ID
+              <input id="externalCallId" />
+            </label>
+            <label>
+              통화 시작 시각
+              <input id="startedAt" />
+            </label>
+            <label>
+              상대 전화번호
+              <input id="phoneNumber" value="01012345678" />
+            </label>
+            <label>
+              Victim Name
+              <input id="victimName" value="김OO" />
+            </label>
+            <label>
+              Victim Age
+              <input id="victimAge" type="number" min="1" value="71" />
+            </label>
+            <label class="full">
+              Session ID
+              <input id="sessionId" placeholder="세션 생성 후 자동 반영됩니다." />
+            </label>
+          </div>
+          <div class="actions">
+            <button id="createSession">세션 생성</button>
+            <button id="getSession" class="secondary">세션 조회</button>
+            <button id="createAndLoad" class="success">세션 생성 후 상태 불러오기</button>
+          </div>
+        </section>
+
+        <section>
+          <h2>2. 실시간 상태판</h2>
+          <div class="stats">
+            <div class="stat">
+              <div class="label">현재 Session ID</div>
+              <div id="stateSessionId" class="value">-</div>
+            </div>
+            <div class="stat">
+              <div class="label">다음 Sequence</div>
+              <div id="stateNextSequence" class="value">1</div>
+            </div>
+            <div class="stat">
+              <div class="label">마지막 위험도</div>
+              <div id="stateRiskScore" class="value">-</div>
+            </div>
+            <div class="stat">
+              <div class="label">WebSocket 권장</div>
+              <div id="stateShouldSocket" class="value">false</div>
+            </div>
+            <div class="stat">
+              <div class="label">WebSocket 상태</div>
+              <div id="stateSocket" class="value">DISCONNECTED</div>
+            </div>
+            <div class="stat">
+              <div class="label">마지막 분석 요약</div>
+              <div id="stateSummary" class="value">-</div>
+              <div id="stateKeywords" class="mini">keywords: -</div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>3. 청크 편집기</h2>
+          <div class="grid-4">
+            <label>
+              Mode
+              <select id="chunkMode">
+                <option value="rest">REST</option>
+                <option value="socket">WebSocket</option>
+              </select>
+            </label>
+            <label>
+              Chunk ID
+              <input id="chunkId" />
+            </label>
+            <label>
+              Sequence
+              <input id="sequence" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Duration(ms)
+              <input id="chunkDuration" type="number" min="1000" step="1000" value="5000" />
+            </label>
+            <label>
+              시작 ms
+              <input id="startedAtMs" type="number" min="0" value="0" />
+            </label>
+            <label>
+              종료 ms
+              <input id="endedAtMs" type="number" min="0" value="5000" />
+            </label>
+            <label class="full">
+              STT 확정 텍스트
+              <textarea id="transcriptText">검찰입니다. 안전계좌로 즉시 이체하세요.</textarea>
+            </label>
+          </div>
+
+          <div class="pill-row">
+            <button class="pill" data-text="정상 통화입니다. 저녁에 다시 전화드릴게요.">정상 예시 1</button>
+            <button class="pill" data-text="병원 예약 확인차 연락드렸습니다. 날짜를 다시 잡겠습니다.">정상 예시 2</button>
+            <button class="pill" data-text="검찰입니다. 안전계좌로 바로 이체하세요.">위험 예시 1</button>
+            <button class="pill" data-text="원격 앱을 설치하고 계좌 비밀번호를 입력하세요.">위험 예시 2</button>
+            <button class="pill" data-text="아드님이 사고를 내서 합의금이 급합니다. 지금 송금하세요.">위험 예시 3</button>
+          </div>
+
+          <div class="actions">
+            <button id="sendOnceRest">현재 청크 즉시 REST 전송</button>
+            <button id="sendOnceSocket" class="secondary">현재 청크 즉시 WebSocket 전송</button>
+            <button id="addQueue">큐에 추가</button>
+            <button id="cloneDangerChunk" class="warning">위험 샘플 청크 추가</button>
+            <button id="cloneNormalChunk" class="ghost">정상 샘플 청크 추가</button>
+          </div>
+        </section>
+
+        <section>
+          <h2>4. 청크 큐 / 배치 실행</h2>
+          <div class="actions">
+            <button id="runQueuedRest">REST 큐 실행</button>
+            <button id="runQueuedSocket" class="secondary">WebSocket 큐 실행</button>
+            <button id="runScenario" class="success">전체 시나리오 자동 실행</button>
+            <button id="clearQueue" class="danger">큐 비우기</button>
+          </div>
+          <p class="hint">
+            `전체 시나리오 자동 실행`은 세션을 만들고, 큐 안의 `REST → WebSocket` 순서대로 자동 처리합니다.
+            REST 응답의 `shouldOpenWebSocket=true` 가 나오면 자동으로 소켓을 연결합니다.
+          </p>
+          <div id="queue" class="queue"></div>
+        </section>
+
+        <section>
+          <h2>5. WebSocket 제어</h2>
+          <div class="status-row">
+            <span id="socketDot" class="dot"></span>
+            <span id="socketStatus">연결 안 됨</span>
+          </div>
+          <div class="actions">
+            <button id="connectSocket">WebSocket 연결</button>
+            <button id="disconnectSocket" class="danger" disabled>연결 종료</button>
+            <button id="sendPing" class="secondary" disabled>PING 전송</button>
+            <button id="sendRealtimeAgain" class="ghost" disabled>마지막 실시간 청크 재전송</button>
+            <button id="completeSession" class="warning" disabled>SESSION_COMPLETE 전송</button>
+          </div>
+          <p class="hint">
+            연결 주소는 `/ws/v1/victim?sessionId={sessionId}` 입니다.
+            WebSocket 분석 단계에서는 Spring이 FastAPI의 실시간 분석 endpoint를 호출합니다.
+          </p>
+        </section>
+      </div>
+
+      <div class="column">
+        <section>
+          <h2>6. 로그 콘솔</h2>
+          <div class="actions">
+            <button id="clearLog" class="secondary">로그 지우기</button>
+            <button id="copyLog" class="ghost">로그 복사</button>
+          </div>
+          <div id="log"></div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id)
+      let socket = null
+      let lastRealtimeEvent = null
+      let queueItems = []
+
+      const runtime = {
+        sessionId: '',
+        nextSequence: 1,
+        lastSequence: 0,
+        lastRiskScore: null,
+        shouldOpenWebSocket: false,
+        lastSummary: '',
+        lastKeywords: [],
+        socketConnected: false,
+      }
+
+      function nowIso() {
+        return new Date().toISOString()
+      }
+
+      function randomId(prefix) {
+        return `${prefix}-${crypto.randomUUID()}`
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+      }
+
+      function initializeValues() {
+        $('userId').value = '1001'
+        $('externalCallId').value = randomId('browser-call')
+        $('startedAt').value = nowIso()
+        $('chunkId').value = randomId('chunk')
+        syncEndedAt()
+        renderState()
+        renderQueue()
+      }
+
+      function renderState() {
+        $('stateSessionId').textContent = runtime.sessionId || '-'
+        $('stateNextSequence').textContent = runtime.nextSequence
+        $('stateRiskScore').textContent = runtime.lastRiskScore ?? '-'
+        $('stateShouldSocket').textContent = String(runtime.shouldOpenWebSocket)
+        $('stateSocket').textContent = runtime.socketConnected ? 'CONNECTED' : 'DISCONNECTED'
+        $('stateSummary').textContent = runtime.lastSummary || '-'
+        $('stateKeywords').textContent = `keywords: ${runtime.lastKeywords.length ? runtime.lastKeywords.join(', ') : '-'}`
+        $('sessionId').value = runtime.sessionId || $('sessionId').value
+        $('sequence').value = runtime.nextSequence
+        $('lastSequence').value = runtime.lastSequence
+      }
+
+      function renderQueue() {
+        const container = $('queue')
+        if (queueItems.length === 0) {
+          container.innerHTML = '<div class="queue-empty">아직 추가된 청크가 없습니다. 현재 편집기 내용을 큐에 넣어보세요.</div>'
+          return
+        }
+
+        container.innerHTML = queueItems
+          .map((item, index) => {
+            return `
+              <div class="queue-item">
+                <div class="queue-top">
+                  <div>
+                    <span class="queue-mode ${item.mode === 'rest' ? 'mode-rest' : 'mode-socket'}">${item.mode.toUpperCase()}</span>
+                    <strong>#${index + 1} ${escapeHtml(item.chunkId)}</strong>
+                  </div>
+                  <div class="actions" style="margin-top:0">
+                    <button class="ghost" onclick="moveQueueUp(${index})" ${index === 0 ? 'disabled' : ''}>위로</button>
+                    <button class="ghost" onclick="moveQueueDown(${index})" ${index === queueItems.length - 1 ? 'disabled' : ''}>아래로</button>
+                    <button class="danger" onclick="removeQueueItem(${index})">삭제</button>
+                  </div>
+                </div>
+                <div class="queue-text">${escapeHtml(item.text)}</div>
+                <div class="queue-meta">
+                  sequence=${item.sequence}, startedAtMs=${item.startedAtMs}, endedAtMs=${item.endedAtMs}
+                </div>
+              </div>
+            `
+          })
+          .join('')
+      }
+
+      function appendLog(direction, title, payload, className = '') {
+        const line = document.createElement('div')
+        line.className = className
+        const body = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2)
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${direction} ${title}\n${body}\n\n`
+        $('log').appendChild(line)
+        $('log').scrollTop = $('log').scrollHeight
+      }
+
+      async function request(path, options = {}) {
+        appendLog('OUT', `${options.method || 'GET'} ${path}`, options.body || '(body 없음)', 'log-out')
+        const response = await fetch(path, options)
+        const text = await response.text()
+        let body = text
+        try {
+          body = text ? JSON.parse(text) : null
+        } catch {
+          // HTML/plain text 응답도 그대로 로그에서 볼 수 있게 둔다.
+        }
+        appendLog('IN', `${response.status} ${response.statusText}`, body, response.ok ? 'log-in' : 'log-error')
+        if (!response.ok) throw new Error(body?.message || `HTTP ${response.status}`)
+        return body
+      }
+
+      function requireSessionId() {
+        const sessionId = $('sessionId').value.trim()
+        if (!sessionId) throw new Error('먼저 세션을 생성하거나 Session ID를 입력하세요.')
+        return sessionId
+      }
+
+      function updateChunkRangeFromState() {
+        $('sequence').value = runtime.nextSequence
+        $('startedAtMs').value = runtime.lastSequence * Number($('chunkDuration').value)
+        syncEndedAt()
+      }
+
+      function syncEndedAt() {
+        const startedAtMs = Number($('startedAtMs').value || 0)
+        const duration = Number($('chunkDuration').value || 5000)
+        $('endedAtMs').value = startedAtMs + duration
+      }
+
+      function resetComposerIds() {
+        $('chunkId').value = randomId('chunk')
+      }
+
+      function applyPreset(type) {
+        if (type === 'normal') {
+          $('transcriptText').value = '오늘은 일정 확인 전화였습니다. 오후에 다시 연락드리겠습니다.'
+          $('victimName').value = '김OO'
+          $('victimAge').value = '71'
+          $('userId').value = '1001'
+          $('phoneNumber').value = '01012345678'
+          queueItems = []
+          enqueueSample('rest', '안녕하세요. 오늘 예약 일정만 다시 확인드릴게요.')
+          enqueueSample('rest', '계좌이체나 앱 설치는 필요 없습니다. 내일 다시 연락드리겠습니다.')
+        } else {
+          $('transcriptText').value = '검찰입니다. 안전계좌로 즉시 이체하세요.'
+          $('victimName').value = '박OO'
+          $('victimAge').value = '68'
+          $('userId').value = '1001'
+          $('phoneNumber').value = '01099998888'
+          queueItems = []
+          enqueueSample('rest', '검찰입니다. 본인 명의 계좌가 범죄에 연루됐습니다.')
+          enqueueSample('rest', '안전계좌로 바로 이체하지 않으면 자금이 묶입니다.')
+          enqueueSample('socket', '지금 원격 앱을 설치하고 보안코드를 입력하세요.')
+          enqueueSample('socket', '아무에게도 말하지 말고 계속 통화 상태를 유지하세요.')
+        }
+        renderQueue()
+        appendLog('INFO', '시나리오 적용', `${type === 'normal' ? '정상' : '고위험'} 시나리오가 채워졌습니다.`, 'log-info')
+      }
+
+      async function createSession() {
+        const body = await request('/api/mobile/call-sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: Number($('userId').value),
+            externalCallId: $('externalCallId').value,
+            deviceId: $('deviceId').value,
+            startedAt: $('startedAt').value,
+            phoneNumber: $('phoneNumber').value,
+            victim: {
+              name: $('victimName').value,
+              age: Number($('victimAge').value),
+            },
+          }),
+        })
+
+        runtime.sessionId = body.sessionId
+        runtime.nextSequence = body.nextTranscriptSequence
+        runtime.lastSequence = Math.max(0, body.nextTranscriptSequence - 1)
+        renderState()
+        updateChunkRangeFromState()
+        resetComposerIds()
+        return body
+      }
+
+      async function getSession() {
+        const body = await request(`/api/mobile/call-sessions/${encodeURIComponent(requireSessionId())}`)
+        runtime.sessionId = body.sessionId
+        runtime.nextSequence = body.nextTranscriptSequence
+        runtime.lastSequence = Math.max(0, body.nextTranscriptSequence - 1)
+        renderState()
+        updateChunkRangeFromState()
+        return body
+      }
+
+      function buildChunkPayloadFromEditor() {
+        return {
+          mode: $('chunkMode').value,
+          chunkId: $('chunkId').value,
+          sequence: Number($('sequence').value),
+          text: $('transcriptText').value,
+          startedAtMs: Number($('startedAtMs').value),
+          endedAtMs: Number($('endedAtMs').value),
+          isFinal: true,
+        }
+      }
+
+      function applyAnalysisResult(body) {
+        runtime.lastRiskScore = body.riskScore ?? runtime.lastRiskScore
+        runtime.shouldOpenWebSocket = Boolean(body.shouldOpenWebSocket)
+        runtime.lastSummary = body.aiSummary || runtime.lastSummary
+        runtime.lastKeywords = Array.isArray(body.keywords) ? body.keywords : runtime.lastKeywords
+        runtime.lastSequence = body.acceptedSequence ?? runtime.lastSequence
+        runtime.nextSequence = body.nextTranscriptSequence ?? runtime.nextSequence
+        renderState()
+        updateChunkRangeFromState()
+        resetComposerIds()
+      }
+
+      async function analyzeRestChunk(chunk) {
+        const body = await request(`/api/mobile/call-sessions/${encodeURIComponent(requireSessionId())}/transcripts/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chunkId: chunk.chunkId,
+            sequence: chunk.sequence,
+            text: chunk.text,
+            startedAtMs: chunk.startedAtMs,
+            endedAtMs: chunk.endedAtMs,
+            isFinal: true,
+          }),
+        })
+
+        applyAnalysisResult(body)
+
+        if (body.shouldOpenWebSocket) {
+          appendLog('INFO', '실시간 전환 권장', '이제 WebSocket 연결을 시작해도 됩니다.', 'log-info')
+        }
+
+        return body
+      }
+
+      function setSocketConnected(connected, message) {
+        runtime.socketConnected = connected
+        $('socketDot').classList.toggle('connected', connected)
+        $('socketStatus').textContent = message
+        $('connectSocket').disabled = connected
+        $('disconnectSocket').disabled = !connected
+        $('sendPing').disabled = !connected
+        $('sendRealtimeAgain').disabled = !connected
+        $('completeSession').disabled = !connected
+        renderState()
+      }
+
+      function connectSocket() {
+        return new Promise((resolve, reject) => {
+          try {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+            const url = `${protocol}//${location.host}/ws/v1/victim?sessionId=${encodeURIComponent(requireSessionId())}`
+            appendLog('OUT', 'WebSocket 연결', url, 'log-out')
+            socket = new WebSocket(url)
+
+            socket.onopen = () => {
+              setSocketConnected(true, '연결됨')
+              resolve()
+            }
+            socket.onmessage = (event) => {
+              const message = JSON.parse(event.data)
+              appendLog('IN', `WebSocket ${message.eventType}`, message, 'log-in')
+              applyServerEvent(message)
+            }
+            socket.onerror = () => {
+              appendLog('ERR', 'WebSocket 오류', '브라우저 콘솔과 서버 로그를 확인하세요.', 'log-error')
+              reject(new Error('WebSocket 연결 오류'))
+            }
+            socket.onclose = (event) => {
+              setSocketConnected(false, `연결 종료 (${event.code})`)
+              appendLog('ERR', 'WebSocket 연결 종료', { code: event.code, reason: event.reason }, 'log-error')
+            }
+          } catch (error) {
+            appendLog('ERR', 'WebSocket 연결 실패', error.message, 'log-error')
+            reject(error)
+          }
+        })
+      }
+
+      function sendSocketEvent(eventType, data) {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          throw new Error('WebSocket이 연결되어 있지 않습니다.')
+        }
+        const payload = {
+          eventId: randomId('browser-event'),
+          eventType,
+          sessionId: requireSessionId(),
+          occurredAt: nowIso(),
+          data,
+        }
+        appendLog('OUT', `WebSocket ${eventType}`, payload, 'log-out')
+        socket.send(JSON.stringify(payload))
+        return payload
+      }
+
+      async function sendRealtimeChunk(chunk) {
+        const payload = sendSocketEvent('TRANSCRIPT_CHUNK', {
+          chunkId: chunk.chunkId,
+          sequence: chunk.sequence,
+          text: chunk.text,
+          startedAtMs: chunk.startedAtMs,
+          endedAtMs: chunk.endedAtMs,
+          isFinal: true,
+        })
+        lastRealtimeEvent = payload
+        return payload
+      }
+
+      function applyServerEvent(message) {
+        if (message.eventType === 'SESSION_READY') {
+          runtime.nextSequence = message.data.nextTranscriptSequence
+          runtime.lastSequence = Math.max(0, message.data.nextTranscriptSequence - 1)
+          renderState()
+          updateChunkRangeFromState()
+        }
+
+        if (message.eventType === 'TRANSCRIPT_ACK') {
+          runtime.lastSequence = message.data.acceptedSequence
+          if (!message.data.duplicate) {
+            runtime.nextSequence = message.data.nextTranscriptSequence
+          }
+          renderState()
+          updateChunkRangeFromState()
+          resetComposerIds()
+        }
+
+        if (message.eventType === 'ANALYSIS_RESULT') {
+          runtime.lastRiskScore = message.data.riskScore
+          runtime.lastSummary = message.data.aiSummary || ''
+          runtime.lastKeywords = Array.isArray(message.data.keywords) ? message.data.keywords : []
+          renderState()
+        }
+      }
+
+      function addCurrentChunkToQueue() {
+        queueItems.push(buildChunkPayloadFromEditor())
+        renderQueue()
+        appendLog('INFO', '큐 추가', '현재 편집기 청크를 큐에 넣었습니다.', 'log-info')
+      }
+
+      function enqueueSample(mode, text) {
+        const sequence = queueItems.length + 1
+        queueItems.push({
+          mode,
+          chunkId: randomId('chunk'),
+          sequence,
+          text,
+          startedAtMs: (sequence - 1) * 5000,
+          endedAtMs: sequence * 5000,
+          isFinal: true,
+        })
+      }
+
+      function removeQueueItem(index) {
+        queueItems.splice(index, 1)
+        renderQueue()
+      }
+
+      function moveQueueUp(index) {
+        if (index <= 0) return
+        const temp = queueItems[index - 1]
+        queueItems[index - 1] = queueItems[index]
+        queueItems[index] = temp
+        renderQueue()
+      }
+
+      function moveQueueDown(index) {
+        if (index >= queueItems.length - 1) return
+        const temp = queueItems[index + 1]
+        queueItems[index + 1] = queueItems[index]
+        queueItems[index] = temp
+        renderQueue()
+      }
+
+      async function runQueued(mode) {
+        const items = queueItems.filter((item) => item.mode === mode)
+        if (items.length === 0) {
+          appendLog('INFO', '큐 실행 생략', `${mode.toUpperCase()} 큐가 비어 있습니다.`, 'log-info')
+          return
+        }
+
+        if (mode === 'socket' && (!socket || socket.readyState !== WebSocket.OPEN)) {
+          await connectSocket()
+        }
+
+        for (const item of items) {
+          item.sequence = runtime.nextSequence
+          item.startedAtMs = runtime.lastSequence * 5000
+          item.endedAtMs = item.startedAtMs + 5000
+          item.chunkId = randomId('chunk')
+
+          if (mode === 'rest') {
+            await analyzeRestChunk(item)
+          } else {
+            await sendRealtimeChunk(item)
+            await wait(250)
+          }
+        }
+      }
+
+      async function runScenario() {
+        try {
+          if (!$('sessionId').value.trim()) {
+            await createSession()
+          }
+
+          await runQueued('rest')
+
+          if (runtime.shouldOpenWebSocket) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+              await connectSocket()
+            }
+            await runQueued('socket')
+          } else {
+            appendLog('INFO', '자동 전환 생략', 'REST 분석 결과상 WebSocket 전환 조건이 아직 충족되지 않았습니다.', 'log-info')
+          }
+        } catch (error) {
+          appendLog('ERR', '전체 시나리오 실행 실패', error.message, 'log-error')
+        }
+      }
+
+      function wait(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms))
+      }
+
+      window.removeQueueItem = removeQueueItem
+      window.moveQueueUp = moveQueueUp
+      window.moveQueueDown = moveQueueDown
+
+      $('startedAtMs').addEventListener('input', syncEndedAt)
+      $('chunkDuration').addEventListener('input', syncEndedAt)
+
+      document.querySelectorAll('.pill').forEach((button) => {
+        button.addEventListener('click', () => {
+          $('transcriptText').value = button.dataset.text
+        })
+      })
+
+      $('presetNormal').addEventListener('click', () => applyPreset('normal'))
+      $('presetDanger').addEventListener('click', () => applyPreset('danger'))
+      $('resetAll').addEventListener('click', () => {
+        queueItems = []
+        runtime.sessionId = ''
+        runtime.nextSequence = 1
+        runtime.lastSequence = 0
+        runtime.lastRiskScore = null
+        runtime.shouldOpenWebSocket = false
+        runtime.lastSummary = ''
+        runtime.lastKeywords = []
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.close(1000, 'reset')
+        }
+        $('sessionId').value = ''
+        initializeValues()
+        appendLog('INFO', '초기화', '폼과 상태를 초기화했습니다.', 'log-info')
+      })
+
+      $('createSession').addEventListener('click', async () => {
+        try {
+          await createSession()
+        } catch (error) {
+          appendLog('ERR', '세션 생성 실패', error.message, 'log-error')
+        }
+      })
+
+      $('getSession').addEventListener('click', async () => {
+        try {
+          await getSession()
+        } catch (error) {
+          appendLog('ERR', '세션 조회 실패', error.message, 'log-error')
+        }
+      })
+
+      $('createAndLoad').addEventListener('click', async () => {
+        try {
+          await createSession()
+          await getSession()
+        } catch (error) {
+          appendLog('ERR', '세션 생성 후 조회 실패', error.message, 'log-error')
+        }
+      })
+
+      $('sendOnceRest').addEventListener('click', async () => {
+        try {
+          await analyzeRestChunk(buildChunkPayloadFromEditor())
+        } catch (error) {
+          appendLog('ERR', 'REST 청크 전송 실패', error.message, 'log-error')
+        }
+      })
+
+      $('sendOnceSocket').addEventListener('click', async () => {
+        try {
+          if (!socket || socket.readyState !== WebSocket.OPEN) {
+            await connectSocket()
+          }
+          await sendRealtimeChunk(buildChunkPayloadFromEditor())
+        } catch (error) {
+          appendLog('ERR', 'WebSocket 청크 전송 실패', error.message, 'log-error')
+        }
+      })
+
+      $('addQueue').addEventListener('click', addCurrentChunkToQueue)
+      $('cloneDangerChunk').addEventListener('click', () => {
+        enqueueSample('rest', '금융감독원입니다. 지금부터 통장 전체를 보호 조치해야 합니다.')
+        renderQueue()
+      })
+      $('cloneNormalChunk').addEventListener('click', () => {
+        enqueueSample('rest', '안녕하세요. 배송 일정만 간단히 확인드리겠습니다.')
+        renderQueue()
+      })
+
+      $('runQueuedRest').addEventListener('click', async () => {
+        try {
+          await runQueued('rest')
+        } catch (error) {
+          appendLog('ERR', 'REST 큐 실행 실패', error.message, 'log-error')
+        }
+      })
+
+      $('runQueuedSocket').addEventListener('click', async () => {
+        try {
+          await runQueued('socket')
+        } catch (error) {
+          appendLog('ERR', 'WebSocket 큐 실행 실패', error.message, 'log-error')
+        }
+      })
+
+      $('runScenario').addEventListener('click', runScenario)
+      $('clearQueue').addEventListener('click', () => {
+        queueItems = []
+        renderQueue()
+      })
+
+      $('connectSocket').addEventListener('click', async () => {
+        try {
+          await connectSocket()
+        } catch (error) {
+          appendLog('ERR', 'WebSocket 연결 실패', error.message, 'log-error')
+        }
+      })
+
+      $('disconnectSocket').addEventListener('click', () => socket?.close(1000, 'user-request'))
+      $('sendPing').addEventListener('click', () => {
+        try {
+          sendSocketEvent('PING', {})
+        } catch (error) {
+          appendLog('ERR', 'PING 전송 실패', error.message, 'log-error')
+        }
+      })
+
+      $('sendRealtimeAgain').addEventListener('click', () => {
+        try {
+          if (!lastRealtimeEvent) throw new Error('재전송할 마지막 실시간 이벤트가 없습니다.')
+          appendLog('OUT', 'WebSocket 마지막 실시간 청크 재전송', lastRealtimeEvent, 'log-out')
+          socket.send(JSON.stringify(lastRealtimeEvent))
+        } catch (error) {
+          appendLog('ERR', '실시간 재전송 실패', error.message, 'log-error')
+        }
+      })
+
+      $('completeSession').addEventListener('click', () => {
+        try {
+          sendSocketEvent('SESSION_COMPLETE', {
+            endedAt: nowIso(),
+            lastTranscriptSequence: runtime.lastSequence,
+          })
+        } catch (error) {
+          appendLog('ERR', '통화 종료 실패', error.message, 'log-error')
+        }
+      })
+
+      $('clearLog').addEventListener('click', () => {
+        $('log').textContent = ''
+      })
+
+      $('copyLog').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText($('log').textContent)
+          appendLog('INFO', '로그 복사', '로그를 클립보드에 복사했습니다.', 'log-info')
+        } catch (error) {
+          appendLog('ERR', '로그 복사 실패', error.message, 'log-error')
+        }
+      })
+
+      initializeValues()
+    </script>
+  </body>
+</html>
