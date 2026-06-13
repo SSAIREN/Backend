@@ -7,14 +7,17 @@ import com.ssairen.backend.domain.callsession.analysis.dto.TranscriptAnalysisRes
 import com.ssairen.backend.domain.casefile.entity.PhishingType;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
+import com.ssairen.backend.global.logging.DebugExecutionTimer;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
+@Slf4j
 public class MockOpenApiClient {
 
     private static final String SYSTEM_PROMPT = """
@@ -66,21 +69,25 @@ public class MockOpenApiClient {
         }
 
         try {
-            GeminiGenerateContentResponse response = restClient.post()
-                    .uri(builder -> builder
-                            .path(resolveChatPath())
-                            .queryParam("key", apiKey)
-                            .build())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(new GeminiGenerateContentRequest(
-                            new SystemInstruction(List.of(new Part(SYSTEM_PROMPT))),
-                            List.of(
-                                    new Content(List.of(new Part(buildUserPrompt(command, channel))))
-                            ),
-                            new GenerationConfig("application/json")
-                    ))
-                    .retrieve()
-                    .body(GeminiGenerateContentResponse.class);
+            GeminiGenerateContentResponse response = DebugExecutionTimer.measure(
+                    log,
+                    "external-rest",
+                    "mockOpenApi.generateContent",
+                    "channel=" + channel + ", model=" + model + ", sessionId=" + command.sessionId(),
+                    () -> restClient.post()
+                            .uri(builder -> builder
+                                    .path(resolveChatPath())
+                                    .queryParam("key", apiKey)
+                                    .build())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(new GeminiGenerateContentRequest(
+                                    new SystemInstruction(List.of(new Part(SYSTEM_PROMPT))),
+                                    List.of(new Content(List.of(new Part(buildUserPrompt(command, channel))))),
+                                    new GenerationConfig("application/json")
+                            ))
+                            .retrieve()
+                            .body(GeminiGenerateContentResponse.class)
+            );
 
             String content = extractContent(response);
             StructuredAnalysisResponse parsed = objectMapper.readValue(content, StructuredAnalysisResponse.class);
@@ -130,7 +137,7 @@ public class MockOpenApiClient {
                 {
                   "riskScore": 72,
                   "phishingType": "ACCOUNT_TRANSFER_INDUCEMENT",
-                  "aiSummary": "계좌 이체를 유도하는 정황이 반복되어 보이스피싱 위험이 높습니다.",
+                  "aiSummary": "계좌 이체를 유도하는 정황이 반복되어 보이스피싱 위험이 있습니다.",
                   "keywords": ["계좌이체", "기관사칭", "압박"]
                 }
                 """.formatted(

@@ -9,14 +9,17 @@ import com.ssairen.backend.domain.callsession.repository.TranscriptChunkReposito
 import com.ssairen.backend.domain.notification.service.GuardianAlertService;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
+import com.ssairen.backend.global.logging.DebugExecutionTimer;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 public class TranscriptAnalysisService {
 
     private final CallSessionRepository callSessionRepository;
@@ -47,7 +50,13 @@ public class TranscriptAnalysisService {
     }
 
     private TranscriptAnalysisResult analyze(String sessionId, String chunkId, long sequence, boolean restFlow) {
-        CallSession session = callSessionRepository.findByIdForUpdate(sessionId)
+        CallSession session = DebugExecutionTimer.measure(
+                        log,
+                        "db-read",
+                        "callSessionRepository.findByIdForUpdate",
+                        "sessionId=" + sessionId,
+                        () -> callSessionRepository.findByIdForUpdate(sessionId)
+                )
                 .orElseThrow(() -> new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "Call session not found."));
 
         TranscriptContext transcriptContext = buildTranscriptContext(sessionId, chunkId, sequence);
@@ -67,11 +76,17 @@ public class TranscriptAnalysisService {
                 ? transcriptAnalysisGateway.analyzeRest(command)
                 : transcriptAnalysisGateway.analyzeWebSocket(command);
 
-        session.getFraudCase().applyAnalysisResult(
-                result.riskScore(),
-                result.phishingType(),
-                result.aiSummary(),
-                result.keywords()
+        DebugExecutionTimer.measure(
+                log,
+                "db-update",
+                "fraudCase.applyAnalysisResult",
+                "sessionId=" + sessionId + ", chunkId=" + chunkId + ", sequence=" + sequence,
+                () -> session.getFraudCase().applyAnalysisResult(
+                        result.riskScore(),
+                        result.phishingType(),
+                        result.aiSummary(),
+                        result.keywords()
+                )
         );
 
         guardianAlertService.sendGuardianAlertsIfNeeded(session, result);
@@ -79,8 +94,13 @@ public class TranscriptAnalysisService {
     }
 
     private TranscriptContext buildTranscriptContext(String sessionId, String chunkId, long sequence) {
-        List<TranscriptChunk> chunks = transcriptChunkRepository
-                .findAllByCallSessionIdAndSequenceLessThanEqualOrderBySequenceAsc(sessionId, sequence);
+        List<TranscriptChunk> chunks = DebugExecutionTimer.measure(
+                log,
+                "db-read",
+                "transcriptChunkRepository.findAllByCallSessionIdAndSequenceLessThanEqualOrderBySequenceAsc",
+                "sessionId=" + sessionId + ", sequence<=" + sequence,
+                () -> transcriptChunkRepository.findAllByCallSessionIdAndSequenceLessThanEqualOrderBySequenceAsc(sessionId, sequence)
+        );
 
         if (chunks.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "No transcript chunks are stored for analysis.");
