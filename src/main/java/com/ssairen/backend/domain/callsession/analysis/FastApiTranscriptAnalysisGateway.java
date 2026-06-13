@@ -9,18 +9,15 @@ import com.ssairen.backend.global.error.ErrorCode;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
+@ConditionalOnProperty(name = "ssairen.analysis.provider", havingValue = "fastapi")
 public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGateway {
 
-    /*
-     * FastAPI는 REST 초기 분석과 WebSocket 실시간 분석을 서로 다른 endpoint로 받는다.
-     * 따라서 Spring도 같은 command를 보내더라도 어느 플로우에서 왔는지에 따라
-     * 서로 다른 path로 라우팅해야 한다.
-     */
     private final RestClient restClient;
     private final String restAnalysisPath;
     private final String websocketAnalysisPath;
@@ -56,8 +53,10 @@ public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGatew
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new FastApiAnalysisRequest(
                             command.sessionId(),
+                            command.chunkId(),
                             command.sequence(),
-                            command.transcript(),
+                            command.chunkTranscript(),
+                            command.conversationContext(),
                             command.victimName(),
                             command.victimAge(),
                             command.victimPhone(),
@@ -80,8 +79,8 @@ public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGatew
         } catch (Exception exception) {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
-                    "FastAPI 분석 요청에 실패했습니다.",
-                    Map.of("channel", channel, "message", exception.getMessage())
+                    "FastAPI analysis request failed.",
+                    Map.of("channel", channel, "message", exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage())
             );
         }
     }
@@ -99,8 +98,10 @@ public class FastApiTranscriptAnalysisGateway implements TranscriptAnalysisGatew
 
     private record FastApiAnalysisRequest(
             String sessionId,
+            String chunkId,
             long sequence,
-            String transcript,
+            String chunkTranscript,
+            String conversationContext,
             String victimName,
             Integer victimAge,
             String victimPhone,

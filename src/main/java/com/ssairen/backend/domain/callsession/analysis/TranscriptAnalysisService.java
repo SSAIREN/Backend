@@ -3,54 +3,61 @@ package com.ssairen.backend.domain.callsession.analysis;
 import com.ssairen.backend.domain.callsession.analysis.dto.TranscriptAnalysisCommand;
 import com.ssairen.backend.domain.callsession.analysis.dto.TranscriptAnalysisResult;
 import com.ssairen.backend.domain.callsession.entity.CallSession;
-import com.ssairen.backend.domain.notification.service.GuardianAlertService;
+import com.ssairen.backend.domain.callsession.entity.TranscriptChunk;
 import com.ssairen.backend.domain.callsession.repository.CallSessionRepository;
+import com.ssairen.backend.domain.callsession.repository.TranscriptChunkRepository;
+import com.ssairen.backend.domain.notification.service.GuardianAlertService;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.StringJoiner;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TranscriptAnalysisService {
 
-    /*
-     * 이 서비스는 transcript 청크를 FastAPI로 보내고,
-     * 응답으로 받은 최신 위험도와 메타데이터를 사건 엔티티에 반영한다.
-     * Flutter가 REST로 보내는지, WebSocket으로 보내는지에 따라
-     * FastAPI의 서로 다른 endpoint를 호출하는 것이 핵심 책임이다.
-     */
     private final CallSessionRepository callSessionRepository;
+    private final TranscriptChunkRepository transcriptChunkRepository;
     private final TranscriptAnalysisGateway transcriptAnalysisGateway;
     private final GuardianAlertService guardianAlertService;
 
     public TranscriptAnalysisService(
             CallSessionRepository callSessionRepository,
+            TranscriptChunkRepository transcriptChunkRepository,
             TranscriptAnalysisGateway transcriptAnalysisGateway,
             GuardianAlertService guardianAlertService
     ) {
         this.callSessionRepository = callSessionRepository;
+        this.transcriptChunkRepository = transcriptChunkRepository;
         this.transcriptAnalysisGateway = transcriptAnalysisGateway;
         this.guardianAlertService = guardianAlertService;
     }
 
     @Transactional
-    public TranscriptAnalysisResult analyzeRestChunk(String sessionId, long sequence, String transcript) {
-        return analyze(sessionId, sequence, transcript, true);
+    public TranscriptAnalysisResult analyzeRestChunk(String sessionId, String chunkId, long sequence) {
+        return analyze(sessionId, chunkId, sequence, true);
     }
 
     @Transactional
-    public TranscriptAnalysisResult analyzeWebSocketChunk(String sessionId, long sequence, String transcript) {
-        return analyze(sessionId, sequence, transcript, false);
+    public TranscriptAnalysisResult analyzeWebSocketChunk(String sessionId, String chunkId, long sequence) {
+        return analyze(sessionId, chunkId, sequence, false);
     }
 
-    private TranscriptAnalysisResult analyze(String sessionId, long sequence, String transcript, boolean restFlow) {
+    private TranscriptAnalysisResult analyze(String sessionId, String chunkId, long sequence, boolean restFlow) {
         CallSession session = callSessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "통화 세션을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "Call session not found."));
+
+        TranscriptContext transcriptContext = buildTranscriptContext(sessionId, chunkId, sequence);
 
         TranscriptAnalysisCommand command = new TranscriptAnalysisCommand(
                 sessionId,
+                chunkId,
                 sequence,
-                transcript,
+                transcriptContext.chunkTranscript(),
+                transcriptContext.conversationContext(),
                 session.getVictim().getName(),
                 session.getVictim().getAge(),
                 session.getVictim().getPhone()
@@ -60,11 +67,6 @@ public class TranscriptAnalysisService {
                 ? transcriptAnalysisGateway.analyzeRest(command)
                 : transcriptAnalysisGateway.analyzeWebSocket(command);
 
-        /*
-         * 사건 엔티티에는 항상 가장 최근 분석 결과를 반영한다.
-         * 이후 Flutter가 REST 응답이든 WebSocket 이벤트든 무엇을 보더라도
-         * DB 기준 최신 위험 상태와 일관된 값을 확인할 수 있게 만들기 위함이다.
-         */
         session.getFraudCase().applyAnalysisResult(
                 result.riskScore(),
                 result.phishingType(),
@@ -72,12 +74,43 @@ public class TranscriptAnalysisService {
                 result.keywords()
         );
 
-        /*
-         * 보이스피싱 위험도가 트리거 기준을 넘기면
-         * 현재 피해자와 pairing 된 보호자들에게 MVP FCM 알림을 보낸다.
-         */
         guardianAlertService.sendGuardianAlertsIfNeeded(session, result);
-
         return result;
+    }
+
+    private TranscriptContext buildTranscriptContext(String sessionId, String chunkId, long sequence) {
+        List<TranscriptChunk> chunks = transcriptChunkRepository
+                .findAllByCallSessionIdAndSequenceLessThanEqualOrderBySequenceAsc(sessionId, sequence);
+
+        if (chunks.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "No transcript chunks are stored for analysis.");
+        }
+
+        Map<String, StringJoiner> groupedByChunkId = new LinkedHashMap<>();
+        for (TranscriptChunk chunk : chunks) {
+            groupedByChunkId
+                    .computeIfAbsent(chunk.getChunkId(), ignored -> new StringJoiner(" "))
+                    .add(chunk.getText().trim());
+        }
+
+        StringJoiner chunkTranscriptJoiner = groupedByChunkId.get(chunkId);
+        if (chunkTranscriptJoiner == null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Requested chunkId was not found in stored transcripts.",
+                    Map.of("chunkId", chunkId, "sequence", sequence)
+            );
+        }
+
+        String conversationContext = groupedByChunkId.values().stream()
+                .map(StringJoiner::toString)
+                .filter(text -> !text.isBlank())
+                .reduce((left, right) -> left + "\n" + right)
+                .orElse("");
+
+        return new TranscriptContext(chunkTranscriptJoiner.toString(), conversationContext);
+    }
+
+    private record TranscriptContext(String chunkTranscript, String conversationContext) {
     }
 }

@@ -16,7 +16,6 @@ import java.time.OffsetDateTime;
 @Table(
         name = "transcript_chunks",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_transcript_chunk_id", columnNames = "chunk_id"),
                 @UniqueConstraint(name = "uk_transcript_session_sequence", columnNames = {"call_session_id", "sequence_number"})
         }
 )
@@ -84,5 +83,9 @@ public class TranscriptChunk {
 
     public long getSequence() {
         return sequence;
+    }
+
+    public String getText() {
+        return text;
     }
 }
