@@ -8,7 +8,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record GpsRequest(
-        String callId,
-        String userId
+        String sessionId
 ) {
 }

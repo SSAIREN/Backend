@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * AI 데모 작업 접수 응답(202)이다. AI는 call_id 와 폴링용 status_url 을 즉시 반환한다.
+ * AI 데모 작업 접수 응답(202)이다. AI는 session_id 와 폴링용 status_url 을 즉시 반환한다.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record AiDemoRunResponse(
-        @JsonProperty("call_id") String callId,
+        @JsonProperty("session_id") String sessionId,
         String status,
         @JsonProperty("status_url") String statusUrl
 ) {
