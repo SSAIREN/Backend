@@ -1,6 +1,7 @@
 package com.ssairen.backend.global.config;
 
 import com.ssairen.backend.domain.callsession.websocket.VictimWebSocketHandler;
+import com.ssairen.backend.domain.casefile.websocket.DashboardWebSocketHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -12,19 +13,24 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final VictimWebSocketHandler victimWebSocketHandler;
+    private final DashboardWebSocketHandler dashboardWebSocketHandler;
     private final String[] allowedOrigins;
 
     public WebSocketConfig(
             VictimWebSocketHandler victimWebSocketHandler,
+            DashboardWebSocketHandler dashboardWebSocketHandler,
             @Value("${ssairen.websocket.allowed-origins:*}") String allowedOrigins
     ) {
         this.victimWebSocketHandler = victimWebSocketHandler;
+        this.dashboardWebSocketHandler = dashboardWebSocketHandler;
         this.allowedOrigins = allowedOrigins.split(",");
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(victimWebSocketHandler, "/ws/v1/victim")
+                .setAllowedOrigins(allowedOrigins);
+        registry.addHandler(dashboardWebSocketHandler, "/ws/dashboard")
                 .setAllowedOrigins(allowedOrigins);
     }
 }

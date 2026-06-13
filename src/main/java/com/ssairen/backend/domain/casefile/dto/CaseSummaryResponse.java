@@ -26,6 +26,9 @@ public record CaseSummaryResponse(
         @Schema(description = "케이스 진행 상태", example = "IN_PROGRESS")
         CaseStatus status,
 
+        @Schema(description = "탐지된 주요 키워드", example = "검찰, 계좌 이체, 안전 계좌", nullable = true)
+        String keywords,
+
         @Schema(description = "지역", example = "서울특별시 강남구", nullable = true)
         String region,
 
@@ -43,6 +46,7 @@ public record CaseSummaryResponse(
                 fraudCase.getRiskScore(),
                 fraudCase.getPhishingType(),
                 fraudCase.getStatus(),
+                fraudCase.getKeywords(),
                 fraudCase.getRegion(),
                 fraudCase.getCallDurationSec(),
                 fraudCase.getDetectedAt()

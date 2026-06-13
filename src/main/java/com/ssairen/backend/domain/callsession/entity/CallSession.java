@@ -59,6 +59,9 @@ public class CallSession {
     @Column(name = "final_analysis_requested_at")
     private OffsetDateTime finalAnalysisRequestedAt;
 
+    @Column(name = "dashboard_case_notified_at")
+    private OffsetDateTime dashboardCaseNotifiedAt;
+  
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -110,6 +113,15 @@ public class CallSession {
         this.lastAnalysisRequestedSequence = lastTranscriptSequence;
         this.finalAnalysisRequestedAt = OffsetDateTime.now();
         this.updatedAt = this.finalAnalysisRequestedAt;
+        return true;
+    }
+  
+    public boolean markDashboardCaseNotifiedIfNeeded() {
+        if (this.dashboardCaseNotifiedAt != null) {
+            return false;
+        }
+        this.dashboardCaseNotifiedAt = OffsetDateTime.now();
+        this.updatedAt = this.dashboardCaseNotifiedAt;
         return true;
     }
 
