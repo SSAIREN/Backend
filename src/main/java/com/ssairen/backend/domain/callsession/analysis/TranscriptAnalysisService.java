@@ -3,7 +3,6 @@ package com.ssairen.backend.domain.callsession.analysis;
 import com.ssairen.backend.domain.callsession.analysis.dto.TranscriptAnalysisCommand;
 import com.ssairen.backend.domain.callsession.analysis.dto.TranscriptAnalysisResult;
 import com.ssairen.backend.domain.callsession.entity.CallSession;
-import com.ssairen.backend.domain.notification.service.GuardianAlertService;
 import com.ssairen.backend.domain.callsession.repository.CallSessionRepository;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
@@ -21,16 +20,13 @@ public class TranscriptAnalysisService {
      */
     private final CallSessionRepository callSessionRepository;
     private final TranscriptAnalysisGateway transcriptAnalysisGateway;
-    private final GuardianAlertService guardianAlertService;
 
     public TranscriptAnalysisService(
             CallSessionRepository callSessionRepository,
-            TranscriptAnalysisGateway transcriptAnalysisGateway,
-            GuardianAlertService guardianAlertService
+            TranscriptAnalysisGateway transcriptAnalysisGateway
     ) {
         this.callSessionRepository = callSessionRepository;
         this.transcriptAnalysisGateway = transcriptAnalysisGateway;
-        this.guardianAlertService = guardianAlertService;
     }
 
     @Transactional
@@ -71,12 +67,6 @@ public class TranscriptAnalysisService {
                 result.aiSummary(),
                 result.keywords()
         );
-
-        /*
-         * 보이스피싱 위험도가 트리거 기준을 넘기면
-         * 현재 피해자와 pairing 된 보호자들에게 MVP FCM 알림을 보낸다.
-         */
-        guardianAlertService.sendGuardianAlertsIfNeeded(session, result);
 
         return result;
     }

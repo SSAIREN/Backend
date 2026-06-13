@@ -31,7 +31,6 @@ public class SwaggerConfig {
 
                                 - REST 1단계: 통화 시작 직후 5초 단위 STT를 REST API로 업로드하고, Spring이 FastAPI 분석 서버에 전달한 뒤 위험도 결과를 Flutter에 반환합니다.
                                 - WebSocket 2단계: REST 분석 결과로 실시간 관찰이 필요하다고 판단되면, Flutter가 WebSocket으로 전환하여 추가 STT를 계속 전송합니다.
-                                - 보호자 알림: 이상도가 임계치를 넘으면 Spring이 현재 userId와 연결된 보호자에게 FCM 알림 전송을 시도합니다.
                                 """)
                         .version("v1.1.1"))
                 .tags(List.of(
