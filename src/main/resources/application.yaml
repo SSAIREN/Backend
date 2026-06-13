@@ -38,6 +38,10 @@ ssairen:
   fcm:
     enabled: ${FCM_ENABLED}
     credentials-path: ${FCM_CREDENTIALS_PATH}
+  ai:
+    use:
+      fastapi-url: ${SSAIREN_AI_USE_FASTAPI_URL:http://localhost:8000}
+      demo-path: ${SSAIREN_AI_USE_DEMO_PATH:/api/v1/pipeline-a/runs/demo}
 
 springdoc:
   swagger-ui:
