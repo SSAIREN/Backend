@@ -20,7 +20,7 @@ spring:
 
 ssairen:
   websocket:
-    allowed-origins: "*"
+    allowed-origins: http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000
   analysis:
     provider: ${SSAIREN_ANALYSIS_PROVIDER:mock-open-api}
     websocket-escalation-threshold: ${SSAIREN_WEBSOCKET_ESCALATION_THRESHOLD:70}
