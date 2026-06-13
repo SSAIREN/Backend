@@ -8,6 +8,7 @@ import com.ssairen.backend.domain.casefile.dto.ResponseActionResponse;
 import com.ssairen.backend.domain.casefile.entity.CaseStatus;
 import com.ssairen.backend.domain.casefile.entity.FraudCase;
 import com.ssairen.backend.domain.casefile.repository.FraudCaseRepository;
+import com.ssairen.backend.domain.responseaction.entity.ResponseAction;
 import com.ssairen.backend.domain.responseaction.repository.ResponseActionRepository;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
@@ -23,13 +24,16 @@ public class CaseDashboardService {
 
     private final FraudCaseRepository fraudCaseRepository;
     private final ResponseActionRepository responseActionRepository;
+    private final DashboardNotificationService dashboardNotificationService;
 
     public CaseDashboardService(
             FraudCaseRepository fraudCaseRepository,
-            ResponseActionRepository responseActionRepository
+            ResponseActionRepository responseActionRepository,
+            DashboardNotificationService dashboardNotificationService
     ) {
         this.fraudCaseRepository = fraudCaseRepository;
         this.responseActionRepository = responseActionRepository;
+        this.dashboardNotificationService = dashboardNotificationService;
     }
 
     @Transactional(readOnly = true)
@@ -75,8 +79,22 @@ public class CaseDashboardService {
         FraudCase fraudCase = fraudCaseRepository.findById(caseId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CASE_NOT_FOUND, "케이스를 찾을 수 없습니다."));
 
-        fraudCase.updateStatus(status, OffsetDateTime.now());
+        OffsetDateTime changedAt = OffsetDateTime.now();
+        fraudCase.updateStatus(status, changedAt);
+
+        if (status == CaseStatus.COMPLETED) {
+            completeResponseActions(caseId, changedAt);
+        }
 
         return new CaseStatusUpdateResponse(true);
+    }
+
+    private void completeResponseActions(Long caseId, OffsetDateTime executedAt) {
+        List<ResponseAction> actions = responseActionRepository.findByFraudCaseIdOrderByExecutedAtAsc(caseId);
+        for (ResponseAction action : actions) {
+            if (action.markCompleted(executedAt)) {
+                dashboardNotificationService.broadcastActionUpdate(caseId, action.getActionType(), action.getStatus());
+            }
+        }
     }
 }

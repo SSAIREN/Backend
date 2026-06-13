@@ -51,4 +51,13 @@ public class ResponseAction {
         this.actionType = actionType;
         this.status = ResponseActionStatus.PENDING;
     }
+
+    public boolean markCompleted(OffsetDateTime executedAt) {
+        if (this.status == ResponseActionStatus.COMPLETED) {
+            return false;
+        }
+        this.status = ResponseActionStatus.COMPLETED;
+        this.executedAt = executedAt;
+        return true;
+    }
 }

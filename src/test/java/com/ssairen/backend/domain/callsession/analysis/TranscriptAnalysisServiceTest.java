@@ -13,17 +13,18 @@ import com.ssairen.backend.domain.callsession.repository.CallSessionRepository;
 import com.ssairen.backend.domain.callsession.repository.TranscriptChunkRepository;
 import com.ssairen.backend.domain.casefile.entity.FraudCase;
 import com.ssairen.backend.domain.casefile.entity.PhishingType;
+import com.ssairen.backend.domain.casefile.service.DashboardNotificationService;
 import com.ssairen.backend.domain.notification.service.GuardianAlertService;
 import com.ssairen.backend.domain.user.entity.User;
 import com.ssairen.backend.domain.user.entity.UserRole;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -42,11 +43,25 @@ class TranscriptAnalysisServiceTest {
     @Mock
     private GuardianAlertService guardianAlertService;
 
-    @InjectMocks
+    @Mock
+    private DashboardNotificationService dashboardNotificationService;
+
     private TranscriptAnalysisService transcriptAnalysisService;
 
     @Captor
     private ArgumentCaptor<TranscriptAnalysisCommand> commandCaptor;
+
+    @BeforeEach
+    void setUp() {
+        transcriptAnalysisService = new TranscriptAnalysisService(
+                callSessionRepository,
+                transcriptChunkRepository,
+                transcriptAnalysisGateway,
+                guardianAlertService,
+                dashboardNotificationService,
+                76
+        );
+    }
 
     @Test
     void analyzeRestChunk_groupsStoredChunksByChunkIdBeforeCallingGateway() {

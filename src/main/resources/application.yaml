@@ -31,6 +31,7 @@ ssairen:
   analysis:
     provider: ${SSAIREN_ANALYSIS_PROVIDER:mock-open-api}
     websocket-escalation-threshold: ${SSAIREN_WEBSOCKET_ESCALATION_THRESHOLD:70}
+    dashboard-new-case-risk-score: ${SSAIREN_DASHBOARD_NEW_CASE_RISK_SCORE:76}
     fastapi:
       url: ${SSAIREN_FASTAPI_URL:http://localhost:8000}
       rest-path: ${SSAIREN_FASTAPI_REST_ANALYSIS_PATH:/api/v1/call-analysis/rest}
