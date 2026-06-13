@@ -86,7 +86,13 @@ public class AiToolService {
         log.info("tool[notify_police] 수신: sessionId={}, incidentType={}, riskScore={}",
                 req.sessionId(), req.incidentType(), req.riskScore());
 
-        FraudCase fraudCase = loadSession(req.sessionId()).getFraudCase();
+        CallSession session = loadSession(req.sessionId());
+        if (!session.markPoliceNotifiedIfNeeded()) {
+            log.info("tool[notify_police] 이미 통지된 세션이라 중복 호출을 건너뜁니다: sessionId={}", req.sessionId());
+            return ToolActionResponse.skipped("notify_police", "already notified");
+        }
+
+        FraudCase fraudCase = session.getFraudCase();
 
         ResponseAction action = new ResponseAction(fraudCase, ResponseActionType.POLICE);
         action.markCompleted(OffsetDateTime.now());
@@ -103,9 +109,13 @@ public class AiToolService {
      * check_family_gps: sessionId 로 피해자/케이스를 찾아, 페어링된 보호자에게
      * 위치 확인 요청 FCM 을 발송한다. GuardianNotificationService(/notifications/guardian) 재사용.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public ToolActionResponse familyGps(GpsRequest req) {
         CallSession session = loadSession(req.sessionId());
+        if (!session.markFamilyGpsNotifiedIfNeeded()) {
+            log.info("tool[check_family_gps] 이미 발송된 세션이라 중복 호출을 건너뜁니다: sessionId={}", req.sessionId());
+            return ToolActionResponse.skipped("check_family_gps", "already notified");
+        }
         Long victimId = session.getVictim().getId();
         Long caseId = session.getFraudCase().getId();
 
@@ -127,7 +137,7 @@ public class AiToolService {
     }
 
     private CallSession loadSession(String sessionId) {
-        return callSessionRepository.findById(sessionId)
+        return callSessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.CALL_SESSION_NOT_FOUND, "통화 세션을 찾을 수 없습니다."));
     }
