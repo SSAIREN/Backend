@@ -36,7 +36,8 @@ public class SwaggerConfig {
                         .version("v1.1.1"))
                 .tags(List.of(
                         new Tag().name("통화 세션").description("세션 생성, 세션 상태 조회, 초기 REST 기반 STT 분석 API"),
-                        new Tag().name("피해자 WebSocket").description("REST 분석 이후 실시간 감시 단계에서 사용하는 WebSocket 계약")
+                        new Tag().name("피해자 WebSocket").description("REST 분석 이후 실시간 감시 단계에서 사용하는 WebSocket 계약"),
+                        new Tag().name("경찰 대시보드 WebSocket").description("경찰 관제 대시보드에서 신규 케이스 및 대응 조치 현황을 실시간으로 수신하는 WebSocket 계약")
                 ))
                 .paths(webSocketPaths());
     }
@@ -77,7 +78,71 @@ public class SwaggerConfig {
                         .addApiResponse("400", new ApiResponse().description("sessionId 누락 또는 잘못된 handshake 요청"))
                         .addApiResponse("404", new ApiResponse().description("해당 통화 세션을 찾을 수 없음")));
 
-        return new Paths().addPathItem("/ws/v1/victim", new PathItem().get(operation));
+        return new Paths()
+                .addPathItem("/ws/v1/victim", new PathItem().get(operation))
+                .addPathItem("/ws/dashboard", new PathItem().get(dashboardOperation()));
+    }
+
+    private Operation dashboardOperation() {
+        return new Operation()
+                .tags(List.of("경찰 대시보드 WebSocket"))
+                .summary("경찰 관제 대시보드용 실시간 알림 WebSocket 연결")
+                .description("""
+                        연결 주소: `ws://{host}/ws/dashboard?userId={userId}`
+
+                        `userId`는 POLICE 권한을 가진 사용자의 ID여야 합니다.
+                        연결에 성공하면 서버는 신규 케이스 발생 시 `NEW_CASE` 이벤트를,
+                        대응 조치 진행상황이 변경되면 `ACTION_UPDATE` 이벤트를 브로드캐스트합니다.
+                        클라이언트가 별도로 전송해야 하는 메시지는 없습니다.
+                        """)
+                .addParametersItem(new Parameter()
+                        .name("userId")
+                        .in("query")
+                        .required(true)
+                        .description("POLICE 권한을 가진 사용자 ID")
+                        .example("3001"))
+                .responses(new ApiResponses()
+                        .addApiResponse("101", new ApiResponse()
+                                .description("WebSocket handshake 성공")
+                                .content(new Content().addMediaType(
+                                        "application/json",
+                                        new MediaType()
+                                                .addExamples("SpringBoot -> Dashboard: NEW_CASE", newCaseExample())
+                                                .addExamples("SpringBoot -> Dashboard: ACTION_UPDATE", actionUpdateExample())
+                                )))
+                        .addApiResponse("400", new ApiResponse().description("userId 누락 또는 숫자가 아닌 잘못된 handshake 요청"))
+                        .addApiResponse("404", new ApiResponse().description("POLICE 권한을 가진 사용자를 찾을 수 없음")));
+    }
+
+    private Example newCaseExample() {
+        return new Example()
+                .summary("신규 케이스 발생 이벤트 예시")
+                .value(orderedMap(
+                        entry("type", "NEW_CASE"),
+                        entry("case", orderedMap(
+                                entry("caseId", 1),
+                                entry("victimName", "김OO"),
+                                entry("age", 71),
+                                entry("riskScore", 85),
+                                entry("phishingType", "KIDNAPPING_THREAT"),
+                                entry("status", "IN_PROGRESS"),
+                                entry("keywords", "검찰, 계좌 이체, 안전 계좌"),
+                                entry("region", "서울특별시 강남구"),
+                                entry("callDurationSec", 180),
+                                entry("detectedAt", "2026-06-10T15:20:00+09:00")
+                        ))
+                ));
+    }
+
+    private Example actionUpdateExample() {
+        return new Example()
+                .summary("대응 조치 진행상황 변경 이벤트 예시")
+                .value(orderedMap(
+                        entry("type", "ACTION_UPDATE"),
+                        entry("caseId", 1),
+                        entry("actionType", "GPS"),
+                        entry("status", "COMPLETED")
+                ));
     }
 
     private Example transcriptChunkExample() {
