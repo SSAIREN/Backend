@@ -28,10 +28,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 public class VictimWebSocketHandler extends TextWebSocketHandler {
 
-    /*
-     * 연결된 WebSocket과 통화 세션을 바인딩하기 위해
-     * handshake 직후 session attribute에 callSessionId를 저장한다.
-     */
     private static final String SESSION_ID_ATTRIBUTE = "callSessionId";
 
     private final ObjectMapper objectMapper;
@@ -61,11 +57,6 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
                 session.getRemoteAddress()
         );
 
-        /*
-         * 프론트는 이 응답을 기준으로 다음에 보내야 할 sequence를 맞춰야 한다.
-         * 재연결 상황에서도 서버가 기대하는 sequence를 다시 전달하기 위해
-         * 연결 직후 SESSION_READY를 항상 내려준다.
-         */
         sendEvent(session, VictimServerEvent.of(
                 "SESSION_READY",
                 callSessionId,
@@ -94,7 +85,7 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
                 case "PING" -> sendEvent(session, VictimServerEvent.of("PONG", callSessionId, Map.of()));
                 default -> throw new BusinessException(
                         ErrorCode.INVALID_REQUEST,
-                        "지원하지 않는 WebSocket 이벤트입니다.",
+                        "Unsupported WebSocket event type.",
                         Map.of("eventType", event.eventType())
                 );
             }
@@ -103,7 +94,7 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         } catch (JsonProcessingException exception) {
             sendNack(session, callSessionId, new BusinessException(
                     ErrorCode.INVALID_REQUEST,
-                    "WebSocket JSON 메시지 형식이 올바르지 않습니다."
+                    "WebSocket JSON message format is invalid."
             ));
         }
     }
@@ -112,10 +103,6 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         TranscriptChunkPayload payload = objectMapper.treeToValue(event.data(), TranscriptChunkPayload.class);
         validateTranscriptPayload(payload);
 
-        /*
-         * transcript 저장과 sequence 검증은 세션 서비스에서 수행한다.
-         * 성공하면 먼저 ACK를 반환하고, 그 다음 FastAPI 분석 결과를 내려준다.
-         */
         TranscriptAcceptResult result = callSessionService.acceptTranscript(
                 event.sessionId(),
                 payload.chunkId(),
@@ -141,8 +128,8 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
         try {
             TranscriptAnalysisResult analysisResult = transcriptAnalysisService.analyzeWebSocketChunk(
                     event.sessionId(),
-                    payload.sequence(),
-                    payload.text()
+                    payload.chunkId(),
+                    payload.sequence()
             );
 
             sendEvent(session, VictimServerEvent.of(
@@ -176,7 +163,7 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
     private void handleSessionComplete(WebSocketSession session, VictimClientEvent event) throws IOException {
         SessionCompletePayload payload = objectMapper.treeToValue(event.data(), SessionCompletePayload.class);
         if (payload.endedAt() == null || payload.lastTranscriptSequence() < 0) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "통화 종료 데이터가 올바르지 않습니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Session completion payload is invalid.");
         }
 
         SessionCompletionResult result = callSessionService.completeSession(
@@ -197,28 +184,28 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
 
     private void validateEnvelope(VictimClientEvent event, String boundSessionId) {
         if (event.eventId() == null || event.eventId().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "eventId는 필수입니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "eventId is required.");
         }
         if (event.eventType() == null || event.eventType().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "eventType은 필수입니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "eventType is required.");
         }
         if (!boundSessionId.equals(event.sessionId())) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "연결된 통화 세션과 메시지의 sessionId가 다릅니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Message sessionId does not match the bound call session.");
         }
         if (event.data() == null || event.data().isNull()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "data는 필수입니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "data is required.");
         }
     }
 
     private void validateTranscriptPayload(TranscriptChunkPayload payload) {
         if (payload.chunkId() == null || payload.chunkId().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "chunkId는 필수입니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "chunkId is required.");
         }
         if (payload.sequence() < 1) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "sequence는 1 이상이어야 합니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "sequence must be at least 1.");
         }
         if (!payload.isFinal()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "현재 서버는 확정된 STT 청크만 수신합니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "The current server only accepts final STT chunks.");
         }
     }
 
@@ -240,7 +227,7 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
                 .getQueryParams()
                 .getFirst("sessionId");
         if (sessionId == null || sessionId.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "WebSocket 연결에는 sessionId가 필요합니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "WebSocket connection requires a sessionId.");
         }
         return sessionId;
     }
@@ -248,7 +235,7 @@ public class VictimWebSocketHandler extends TextWebSocketHandler {
     private String getBoundSessionId(WebSocketSession session) {
         Object sessionId = session.getAttributes().get(SESSION_ID_ATTRIBUTE);
         if (sessionId == null) {
-            throw new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "WebSocket 연결에 바인딩된 통화 세션이 없습니다.");
+            throw new BusinessException(ErrorCode.CALL_SESSION_NOT_FOUND, "No call session is bound to this WebSocket connection.");
         }
         return sessionId.toString();
     }
