@@ -8,12 +8,18 @@ import com.ssairen.backend.domain.ai.use.dto.ToolActionResponse;
 import com.ssairen.backend.domain.ai.use.dto.WarningBannerRequest;
 import com.ssairen.backend.domain.callsession.entity.CallSession;
 import com.ssairen.backend.domain.callsession.repository.CallSessionRepository;
+import com.ssairen.backend.domain.casefile.entity.FraudCase;
 import com.ssairen.backend.domain.casefile.entity.PhishingType;
+import com.ssairen.backend.domain.casefile.service.DashboardNotificationService;
 import com.ssairen.backend.domain.notification.dto.GuardianNotificationRequest;
 import com.ssairen.backend.domain.notification.dto.GuardianNotificationResponse;
 import com.ssairen.backend.domain.notification.service.GuardianNotificationService;
+import com.ssairen.backend.domain.responseaction.entity.ResponseAction;
+import com.ssairen.backend.domain.responseaction.entity.ResponseActionType;
+import com.ssairen.backend.domain.responseaction.repository.ResponseActionRepository;
 import com.ssairen.backend.global.error.BusinessException;
 import com.ssairen.backend.global.error.ErrorCode;
+import java.time.OffsetDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,8 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * AI(FastAPI) tool 콜백을 처리하는 서비스다.
- * check_family_gps 는 GuardianNotificationService(보호자 FCM)를 재사용해 실제 발송한다.
- * 나머지 tool 은 데모 단계에서 요청 수신·로그·성공응답만 수행한다.
+ * - check_family_gps: GuardianNotificationService(보호자 FCM)를 재사용해 발송한다.
+ * - notify_police: ResponseAction(POLICE) 기록 후 경찰 대시보드로 broadcast 한다.
+ * - 그 외 tool 은 데모 단계에서 요청 수신·로그·성공응답만 수행한다.
  */
 @Service
 public class AiToolService {
@@ -34,19 +41,25 @@ public class AiToolService {
 
     private final CallSessionRepository callSessionRepository;
     private final GuardianNotificationService guardianNotificationService;
+    private final ResponseActionRepository responseActionRepository;
+    private final DashboardNotificationService dashboardNotificationService;
 
     public AiToolService(
             CallSessionRepository callSessionRepository,
-            GuardianNotificationService guardianNotificationService
+            GuardianNotificationService guardianNotificationService,
+            ResponseActionRepository responseActionRepository,
+            DashboardNotificationService dashboardNotificationService
     ) {
         this.callSessionRepository = callSessionRepository;
         this.guardianNotificationService = guardianNotificationService;
+        this.responseActionRepository = responseActionRepository;
+        this.dashboardNotificationService = dashboardNotificationService;
     }
 
     public ToolActionResponse familyAlert(FamilyAlertRequest req) {
         log.info("tool[send_family_sms_alert] 수신: sessionId={}, scenario={}, riskScore={}",
                 req.sessionId(), req.scenario(), req.riskScore());
-        // TODO: 후속 — family-alert 실제 연동(보류). 필요 시 GuardianNotificationService 재사용.
+        // TODO: 후속 — family-alert 실제 연동(보류).
         return ToolActionResponse.ok("send_family_sms_alert");
     }
 
@@ -64,11 +77,26 @@ public class AiToolService {
         return ToolActionResponse.ok("save_evidence");
     }
 
+    /**
+     * notify_police: sessionId 로 케이스를 찾아 POLICE 대응 조치를 기록하고,
+     * 경찰 대시보드로 ACTION_UPDATE 를 broadcast 한다. (response_actions + DashboardNotificationService 재사용)
+     */
+    @Transactional
     public ToolActionResponse notifyPolice(PoliceReportRequest req) {
         log.info("tool[notify_police] 수신: sessionId={}, incidentType={}, riskScore={}",
                 req.sessionId(), req.incidentType(), req.riskScore());
-        // TODO: 후속 — response_actions 기록/대시보드 통지(대시보드 팀 영역).
-        return ToolActionResponse.ok("notify_police");
+
+        FraudCase fraudCase = loadSession(req.sessionId()).getFraudCase();
+
+        ResponseAction action = new ResponseAction(fraudCase, ResponseActionType.POLICE);
+        action.markCompleted(OffsetDateTime.now());
+        responseActionRepository.save(action);
+        dashboardNotificationService.broadcastActionUpdate(
+                fraudCase.getId(), action.getActionType(), action.getStatus());
+
+        log.info("tool[notify_police] 대시보드 기록·통지 완료: caseId={}, action=POLICE/{}",
+                fraudCase.getId(), action.getStatus());
+        return ToolActionResponse.ok("notify_police", "caseId=" + fraudCase.getId() + ", action=POLICE");
     }
 
     /**
@@ -77,10 +105,7 @@ public class AiToolService {
      */
     @Transactional(readOnly = true)
     public ToolActionResponse familyGps(GpsRequest req) {
-        CallSession session = callSessionRepository.findById(req.sessionId())
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.CALL_SESSION_NOT_FOUND, "통화 세션을 찾을 수 없습니다."));
-
+        CallSession session = loadSession(req.sessionId());
         Long victimId = session.getVictim().getId();
         Long caseId = session.getFraudCase().getId();
 
@@ -99,5 +124,11 @@ public class AiToolService {
         return ToolActionResponse.ok(
                 "check_family_gps",
                 "guardians=" + result.sent().size() + ", fail=" + result.failCount());
+    }
+
+    private CallSession loadSession(String sessionId) {
+        return callSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.CALL_SESSION_NOT_FOUND, "통화 세션을 찾을 수 없습니다."));
     }
 }
