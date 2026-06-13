@@ -62,6 +62,9 @@ public class CallSession {
     @Column(name = "guardian_alert_sent_at")
     private OffsetDateTime guardianAlertSentAt;
 
+    @Column(name = "dashboard_case_notified_at")
+    private OffsetDateTime dashboardCaseNotifiedAt;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -122,6 +125,15 @@ public class CallSession {
         }
         this.guardianAlertSentAt = OffsetDateTime.now();
         this.updatedAt = this.guardianAlertSentAt;
+        return true;
+    }
+
+    public boolean markDashboardCaseNotifiedIfNeeded() {
+        if (this.dashboardCaseNotifiedAt != null) {
+            return false;
+        }
+        this.dashboardCaseNotifiedAt = OffsetDateTime.now();
+        this.updatedAt = this.dashboardCaseNotifiedAt;
         return true;
     }
 
