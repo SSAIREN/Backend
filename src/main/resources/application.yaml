@@ -1,4 +1,11 @@
+logging:
+  level:
+    com.ssairen.backend: DEBUG
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+
 spring:
+
   application:
     name: backend
 
@@ -15,7 +22,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-    show-sql: true
+    show-sql: false
     open-in-view: false
 
 ssairen:
