@@ -29,6 +29,9 @@ ssairen:
       websocket-path: ${SSAIREN_FASTAPI_WEBSOCKET_ANALYSIS_PATH:/api/v1/call-analysis/websocket}
   transcript:
     analysis-threshold-characters: ${TRANSCRIPT_ANALYSIS_THRESHOLD_CHARACTERS:1000}
+  fcm:
+    enabled: ${FCM_ENABLED}
+    credentials-path: ${FCM_CREDENTIALS_PATH}
 
 springdoc:
   swagger-ui:
