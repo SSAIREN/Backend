@@ -106,7 +106,7 @@ public class GuardianReplyService {
                 request.message().trim(),
                 reply.getCreatedAt()
         );
-        victimNotificationService.pushEvent(callSession.getId(), "GUARDIAN_REPLY", payload);
+        victimNotificationService.pushEvent(callSession.getId(), "HARMFUL_RESPONSE_UPDATE", payload);
 
         return new GuardianReplyResponse(
                 callSession.getId(),
