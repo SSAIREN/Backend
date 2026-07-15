@@ -2,7 +2,7 @@
 
 <table border="0" cellspacing="0" cellpadding="0">
   <tr>
-    <td><img src="./logo.png" width="100" height="100" alt="SSAIREN Logo"/></td>
+    <td><img src="https://github.com/SSAIREN/.github/blob/01e0978cccefb46c65e7da94e8cce47a3a8e2ea5/profile/logo.png" width="100" height="100" alt="SSAIREN Logo"/></td>
     <td>&nbsp;&nbsp;&nbsp;</td>
     <td align="left">
       <h1>싸이렌 (SSAIREN)</h1>
@@ -23,7 +23,7 @@
 
 <br><br>
 
-<img src="./image.png" width="700" alt="SSAIREN App Mockup"/>
+<img src="https://github.com/SSAIREN/.github/blob/01e0978cccefb46c65e7da94e8cce47a3a8e2ea5/profile/image.png" width="700" alt="SSAIREN App Mockup"/>
 
 </div>
 
